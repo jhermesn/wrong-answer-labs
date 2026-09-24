@@ -1,0 +1,59 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Fixture - every resource breaks one cost rule
+Parameters:
+  Size:
+    Type: String
+    Default: m5.large
+Resources:
+  Warehouse:
+    Type: AWS::Redshift::Cluster
+    Properties:
+      NodeType: ra3.xlplus
+      ClusterType: single-node
+      DBName: dev
+      MasterUsername: admin
+      ManageMasterPassword: true
+  BigInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-12345678
+      InstanceType: m5.large
+      MetadataOptions:
+        HttpTokens: required
+  ParamSizedInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-12345678
+      InstanceType: !Ref Size
+      MetadataOptions:
+        HttpTokens: required
+  Nat1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      SubnetId: subnet-12345678
+      ConnectivityType: private
+  Nat2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      SubnetId: subnet-12345678
+      ConnectivityType: private
+  Database:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: mysql
+      DBInstanceClass: db.r6g.large
+      AllocatedStorage: '100'
+      MasterUsername: admin
+      ManageMasterUserPassword: true
+  KeptBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+  Repo:
+    Type: AWS::ECR::Repository

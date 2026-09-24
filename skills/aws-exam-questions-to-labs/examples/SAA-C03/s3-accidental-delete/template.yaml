@@ -1,0 +1,26 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'SAA-C03 lab - Recover reports after an accidental delete'
+
+# Starting environment of the scenario: everything the learner receives,
+# including what is broken on purpose. It must NOT solve any challenge.
+
+Resources:
+  ReportsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+Outputs:
+  ReportsBucketName:
+    Description: Bucket that stores the monthly finance reports
+    Value: !Ref ReportsBucket

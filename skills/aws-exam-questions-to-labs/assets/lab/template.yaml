@@ -1,0 +1,17 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: '{{CERT}} lab - {{TITLE}}'
+
+# Starting environment of the scenario: everything the learner receives,
+# including what is broken on purpose. It must NOT solve any challenge.
+
+Parameters:
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+    Description: Latest Amazon Linux 2023 AMI, resolved through SSM so no per-region AMI IDs are hardcoded
+
+Resources:
+  # {{RESOURCES}}
+
+Outputs:
+  # {{OUTPUTS}}

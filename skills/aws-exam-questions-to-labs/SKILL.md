@@ -1,0 +1,58 @@
+---
+name: aws-exam-questions-to-labs
+description: Use when someone studying for an AWS Certification exam (CLF, AIF, SAA, SOA, DVA, DEA, MLA, SAP, DOP, SCS, ANS...) shares practice or exam questions they got wrong and wants to review them hands-on, as labs, CloudFormation exercises, or AWS Microcredential-style challenges ("questões que errei", "transformar questões em laboratório").
+---
+
+# AWS exam questions → hands-on labs
+
+## Overview
+
+Turn missed exam questions into AWS Microcredential-style labs: a business
+scenario, a CloudFormation starting environment, challenges solved in the
+Console without step-by-step, and an automated grader. Topics too expensive or
+impossible to reproduce (Direct Connect, Outposts, Shield Advanced...) become
+docs-only entries with official documentation instead.
+
+Determinism comes from tools, not judgment: `cfn-lint`, `cfn-guard` rules
+(cost + security), `shellcheck`, a link checker, and a real-account self-test.
+Scripts are in this skill's `scripts/`; `<skill>` below is this skill's base directory.
+
+## Inputs
+
+- **Certification**: exam code (`SAA-C03`). If missing, ask; it decides depth and domains.
+- **Questions**: text, screenshots or PDF. For each: stem, options, the learner's answer, and the correct answer if they have it.
+
+Requires `cfn-lint`, `cfn-guard`, `shellcheck`, `jq`, `curl`; `checkov` optional. Missing? Tell the user the install command printed by the validator.
+
+## Workflow
+
+1. **Normalize** questions as `Q1..Qn`: tested concept, services, learner's answer, correct answer. When the correct answer is not given, derive it and confirm it in official docs (AWS Documentation MCP `search_documentation` → `read_documentation`, else docs.aws.amazon.com). No confirming doc → mark `⚠️ unverified`.
+2. **Map domains** from the official exam guide (index: https://docs.aws.amazon.com/aws-certification/latest/examguides/aws-certification-exam-guides.html).
+3. **Group** questions sharing a concept into one lab (1-5 challenges, ≤ 90 min).
+4. **Decide lab vs docs-only** with `references/cost-policy.md`.
+5. **Scaffold**: `bash <skill>/scripts/new_lab.sh <CERT> <kebab-slug> [--docs-only] [--root labs]`. It prints the lab directory.
+6. **Fill every `{{PLACEHOLDER}}`** following `references/lab-format.md`. Prose in the user's language; code, identifiers, file names and anchors stay as shipped.
+7. **Gate**: `bash <skill>/scripts/validate_lab.sh <lab-dir>` until `PASS`. Fix the lab, never the rules.
+8. **Self-test** (labs only): creates billable resources — ask the user first, and needs AWS credentials. `bash <skill>/scripts/selftest.sh <lab-dir>` must end in `SELFTEST PASS` (baseline 0/N, solved N/N, cleanup ran).
+9. **Report**: one row per lab/docs-only entry with questions covered, estimated cost, validator result, and self-test result (or "not run" and why).
+
+## Red flags — stop and fix the lab
+
+| Temptation | Why it is wrong |
+|---|---|
+| Edit `rules/*.guard` or add a suppression so the template passes | Rules are the cost/security contract. A lab that needs a denied type is docs-only. Suppress a security rule only when that insecure setting is the challenge. |
+| Parameterize an instance type/size | Learners could deploy something bigger than the guard validated. Sizes are literals. |
+| Challenge text names the feature that answers it | Microcredentials give requirements, not solutions. State the outcome. |
+| A check passes right after deploy | The template solved the challenge. Selftest will fail. |
+| Price or doc URL from memory | Pricing page or Pricing API only; the validator curls every link. |
+| Skip cleanup of resources created in challenges | They keep billing. List them in `cleanup.sh`. |
+
+## Quick reference
+
+| File | Purpose |
+|---|---|
+| `references/lab-format.md` | Scenario/challenge/grader/template rules, anchors |
+| `references/cost-policy.md` | Lab vs docs-only criteria, cost table sourcing |
+| `examples/SAA-C03/s3-accidental-delete` | Complete lab that passes the gate — copy its style |
+| `examples/SAA-C03/direct-connect-resiliency` | Complete docs-only entry |
+| `rules/lab-cost.guard`, `rules/lab-security.guard` | cfn-guard policy, run by the validator |

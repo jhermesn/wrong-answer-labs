@@ -1,0 +1,17 @@
+{
+  "name": "jhermesn",
+  "owner": {
+    "name": "Jorge Hermes",
+    "url": "https://github.com/jhermesn"
+  },
+  "description": "Study and DevOps skills by jhermesn",
+  "plugins": [
+    {
+      "name": "aws-exam-questions-to-labs",
+      "source": "./",
+      "description": "Turn AWS Certification questions you got wrong into hands-on CloudFormation labs with an automated grader.",
+      "category": "education",
+      "tags": ["aws", "aws-certification", "cloudformation"]
+    }
+  ]
+}

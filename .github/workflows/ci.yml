@@ -1,0 +1,38 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CFN_LINT_VERSION: 1.57.0
+  CFN_GUARD_VERSION: 3.2.1
+  CFN_GUARD_SHA256: 09c2b8cfd81d513374a8da89d4805dc55006a3da52bbf598e272022d4d198e94
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install cfn-lint
+        run: pipx install "cfn-lint==${CFN_LINT_VERSION}"
+
+      - name: Install cfn-guard
+        run: |
+          curl -sSfL -o guard.tgz \
+            "https://github.com/aws-cloudformation/cloudformation-guard/releases/download/${CFN_GUARD_VERSION}/cfn-guard-v3-x86_64-ubuntu-latest.tar.gz"
+          echo "${CFN_GUARD_SHA256}  guard.tgz" | sha256sum --check
+          tar -xzf guard.tgz
+          sudo install cfn-guard-v3-x86_64-ubuntu-latest/cfn-guard /usr/local/bin/cfn-guard
+
+      - name: ShellCheck
+        run: shellcheck -S warning skills/*/scripts/*.sh skills/*/assets/lab/*.sh skills/*/assets/lab/solution/*.sh tests/*.sh
+
+      - name: Rules, validator and examples
+        run: bash tests/run.sh

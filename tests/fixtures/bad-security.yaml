@@ -1,0 +1,65 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Fixture - every resource breaks one security rule
+Parameters:
+  DbPassword:
+    Type: String
+Resources:
+  OpenBucket:
+    Type: AWS::S3::Bucket
+  SshSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ssh open
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+  RdpIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: sg-12345678
+      IpProtocol: tcp
+      FromPort: 3000
+      ToPort: 4000
+      CidrIp: 0.0.0.0/0
+  Imdsv1Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-12345678
+      InstanceType: t3.micro
+  AdminRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: ec2.amazonaws.com}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+      Policies:
+        - PolicyName: star
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: '*'
+                Resource: '*'
+  User:
+    Type: AWS::IAM::User
+  Key:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: !Ref User
+  Database:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    Properties:
+      Engine: mysql
+      DBInstanceClass: db.t4g.micro
+      AllocatedStorage: '20'
+      MasterUsername: admin
+      MasterUserPassword: !Ref DbPassword
+      PubliclyAccessible: true

@@ -1,0 +1,129 @@
+#
+# Security baseline for study labs.
+#
+# A resource may skip a rule only when the insecure setting IS the challenge
+# (e.g. "Challenge 2: block public access"). Declare it on the resource:
+#
+#   Metadata:
+#     guard:
+#       SuppressedRules:
+#         - SEC_S3_BLOCK_PUBLIC_ACCESS   # Challenge 2
+#
+
+let s3_buckets = Resources.*[ Type == 'AWS::S3::Bucket'
+    Metadata.guard.SuppressedRules !exists or Metadata.guard.SuppressedRules.* != 'SEC_S3_BLOCK_PUBLIC_ACCESS' ]
+rule SEC_S3_BLOCK_PUBLIC_ACCESS when %s3_buckets !empty {
+    %s3_buckets.Properties.PublicAccessBlockConfiguration {
+        BlockPublicAcls == true
+        BlockPublicPolicy == true
+        IgnorePublicAcls == true
+        RestrictPublicBuckets == true
+        <<
+            Violation: S3 bucket must set all four PublicAccessBlockConfiguration flags to true.
+        >>
+    }
+}
+
+let security_groups = Resources.*[ Type == 'AWS::EC2::SecurityGroup'
+    Properties.SecurityGroupIngress exists
+    Metadata.guard.SuppressedRules !exists or Metadata.guard.SuppressedRules.* != 'SEC_NO_PUBLIC_ADMIN_PORTS' ]
+rule SEC_NO_PUBLIC_ADMIN_PORTS when %security_groups !empty {
+    %security_groups.Properties.SecurityGroupIngress[
+        CidrIp == '0.0.0.0/0' or CidrIpv6 == '::/0'
+    ] {
+        IpProtocol !in ['-1', -1]
+        FromPort > 22 or ToPort < 22
+        FromPort > 3389 or ToPort < 3389
+        <<
+            Violation: security group opens SSH/RDP (or all traffic) to the internet. Use SSM Session Manager.
+        >>
+    }
+}
+
+let standalone_ingress = Resources.*[ Type == 'AWS::EC2::SecurityGroupIngress'
+    Properties.CidrIp == '0.0.0.0/0' or Properties.CidrIpv6 == '::/0' ]
+rule SEC_NO_PUBLIC_ADMIN_PORTS_STANDALONE when %standalone_ingress !empty {
+    %standalone_ingress.Properties {
+        IpProtocol !in ['-1', -1]
+        FromPort > 22 or ToPort < 22
+        FromPort > 3389 or ToPort < 3389
+        <<
+            Violation: SecurityGroupIngress opens SSH/RDP (or all traffic) to the internet. Use SSM Session Manager.
+        >>
+    }
+}
+
+let ec2_instances = Resources.*[ Type == 'AWS::EC2::Instance'
+    Metadata.guard.SuppressedRules !exists or Metadata.guard.SuppressedRules.* != 'SEC_EC2_IMDSV2' ]
+rule SEC_EC2_IMDSV2 when %ec2_instances !empty {
+    %ec2_instances.Properties.MetadataOptions.HttpTokens == 'required'
+    <<
+        Violation: EC2 instance must require IMDSv2 (MetadataOptions.HttpTokens: required).
+    >>
+}
+
+let iam_policy_holders = Resources.*[ Type in ['AWS::IAM::Role', 'AWS::IAM::User', 'AWS::IAM::Group']
+    Properties.Policies exists ]
+rule SEC_IAM_NO_ADMIN_INLINE when %iam_policy_holders !empty {
+    %iam_policy_holders.Properties.Policies[*].PolicyDocument.Statement[ Effect == 'Allow' ] {
+        Action != '*'
+        Action[*] != '*'
+        <<
+            Violation: inline IAM policy grants Action "*". Scope actions to what the lab needs.
+        >>
+    }
+}
+
+let managed_policies = Resources.*[ Type == 'AWS::IAM::ManagedPolicy' or Type == 'AWS::IAM::Policy' ]
+rule SEC_IAM_NO_ADMIN_POLICY when %managed_policies !empty {
+    %managed_policies.Properties.PolicyDocument.Statement[ Effect == 'Allow' ] {
+        Action != '*'
+        Action[*] != '*'
+        <<
+            Violation: IAM policy grants Action "*". Scope actions to what the lab needs.
+        >>
+    }
+}
+
+let iam_principals = Resources.*[ Type in ['AWS::IAM::Role', 'AWS::IAM::User', 'AWS::IAM::Group']
+    Properties.ManagedPolicyArns exists ]
+rule SEC_IAM_NO_ADMINISTRATOR_ACCESS when %iam_principals !empty {
+    %iam_principals.Properties.ManagedPolicyArns[*] != 'arn:aws:iam::aws:policy/AdministratorAccess'
+    %iam_principals.Properties.ManagedPolicyArns[*] != 'arn:aws:iam::aws:policy/PowerUserAccess'
+    <<
+        Violation: do not attach AdministratorAccess/PowerUserAccess to lab principals.
+    >>
+}
+
+let access_keys = Resources.*[ Type == 'AWS::IAM::AccessKey' ]
+rule SEC_NO_IAM_ACCESS_KEYS when %access_keys !empty {
+    %access_keys empty
+    <<
+        Violation: do not create long-lived IAM access keys in a lab. Use roles.
+    >>
+}
+
+let rds_instances = Resources.*[ Type == 'AWS::RDS::DBInstance' or Type == 'AWS::RDS::DBCluster' ]
+rule SEC_RDS_NO_PLAINTEXT_PASSWORD when %rds_instances !empty {
+    %rds_instances.Properties.MasterUserPassword !exists
+    <<
+        Violation: use ManageMasterUserPassword: true (Secrets Manager) instead of MasterUserPassword.
+    >>
+}
+
+let db_publicly_accessible = Resources.*[ Type == 'AWS::RDS::DBInstance'
+    Metadata.guard.SuppressedRules !exists or Metadata.guard.SuppressedRules.* != 'SEC_RDS_NOT_PUBLIC' ]
+rule SEC_RDS_NOT_PUBLIC when %db_publicly_accessible !empty {
+    %db_publicly_accessible.Properties.PubliclyAccessible !exists or %db_publicly_accessible.Properties.PubliclyAccessible == false
+    <<
+        Violation: RDS instance must not be PubliclyAccessible.
+    >>
+}
+
+let secret_parameters = Parameters[ keys == /(?i)(password|secret|token|apikey)/ ]
+rule SEC_SECRET_PARAMETERS_NOECHO when %secret_parameters !empty {
+    %secret_parameters.NoEcho == true
+    <<
+        Violation: secret-like parameters must set NoEcho: true (prefer Secrets Manager dynamic references).
+    >>
+}
