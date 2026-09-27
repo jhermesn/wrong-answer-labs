@@ -2,6 +2,8 @@ name: ci
 
 on:
   pull_request:
+  # Started by release.yml for release pull requests, which pull_request misses.
+  workflow_dispatch:
 
 permissions:
   contents: read

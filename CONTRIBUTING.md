@@ -55,6 +55,24 @@ spec, runs ShellCheck, and runs `tests/run.sh`, which checks that:
 
 Running it locally is optional.
 
+## Releases
+
+Releases are automatic. After each merge to `main`,
+[release-please](https://github.com/googleapis/release-please) updates a
+release pull request with the next version, worked out from the commit
+messages, and the changelog. Merging that pull request tags the version,
+publishes the GitHub release and bumps `.claude-plugin/plugin.json`, which is
+what makes installed plugins update.
+
+| Commit type | Next version (while below 1.0) |
+|---|---|
+| `fix:` | patch, e.g. 0.2.1 → 0.2.2 |
+| `feat:` | minor, e.g. 0.2.1 → 0.3.0 |
+| `feat!:` or `BREAKING CHANGE:` | minor, e.g. 0.2.1 → 0.3.0 |
+| `docs:`, `test:`, `ci:`, `chore:` | no release on their own |
+
+Never edit the version in `plugin.json` by hand.
+
 ## Conventions
 
 - Code, comments, file names and script output in English. Lab prose follows the

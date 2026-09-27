@@ -1,0 +1,33 @@
+name: release
+
+# release-please keeps a release pull request open with the next semver
+# version (from Conventional Commits), the changelog and the bumped
+# .claude-plugin/plugin.json. Merging that pull request tags the version and
+# publishes the GitHub release.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - id: release
+        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
+
+      # Pull requests opened with GITHUB_TOKEN do not start other workflows, but
+      # workflow_dispatch does. Branch protection requires the `test` check, so
+      # start CI on the release pull request explicitly.
+      - name: Run CI on the release pull request
+        if: steps.release.outputs.prs_created == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_BRANCH: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
+        run: gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$RELEASE_BRANCH"
