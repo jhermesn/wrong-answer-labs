@@ -25,9 +25,17 @@ jobs:
       # Pull requests opened with GITHUB_TOKEN do not start other workflows, but
       # workflow_dispatch does. Branch protection requires the `test` check, so
       # start CI on the release pull request explicitly.
+      # After a release is published, prs_created can be true while `pr` is empty,
+      # so read the branch in the script instead of with fromJSON in the template.
       - name: Run CI on the release pull request
-        if: steps.release.outputs.prs_created == 'true'
+        if: steps.release.outputs.prs_created == 'true' && steps.release.outputs.pr != ''
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_BRANCH: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
-        run: gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$RELEASE_BRANCH"
+          RELEASE_PR: ${{ steps.release.outputs.pr }}
+        run: |
+          release_branch="$(jq -r '.headBranchName // empty' <<<"$RELEASE_PR")"
+          if [[ -z "$release_branch" ]]; then
+            echo "No open release pull request to test."
+            exit 0
+          fi
+          gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$release_branch"
