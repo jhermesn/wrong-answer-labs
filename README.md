@@ -47,7 +47,8 @@ That is why every lab also lists its estimated cost and why you should set a bud
 
 ## Install
 
-**Claude Code (plugin):**
+**Claude Code (plugin):** type these inside a Claude Code session, not in your
+system shell:
 
 ```text
 /plugin marketplace add jhermesn/wrong-answer-labs
@@ -60,6 +61,17 @@ into the agent's skills directory (for Claude Code: `~/.claude/skills/`).
 Then ask:
 
 > I'm studying for SAA-C03. These are the questions I got wrong: ...
+
+### Who runs what
+
+| Step | Who |
+|---|---|
+| Install the plugin, sign in to AWS (`aws login`) | You, once |
+| Install cfn-lint, cfn-guard, ShellCheck | You once, or the agent if you let it |
+| Check answers, write labs, validate, price, self-test | The agent |
+| Deploy a lab, solve it in the Console, run `check.sh`, run `cleanup.sh` | You (that is the lab), or ask the agent to deploy and clean up |
+| Contribute: branch, commit, open a pull request | You or your agent |
+| Test every pull request | CI |
 
 ### Requirements
 

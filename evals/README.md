@@ -10,6 +10,7 @@ a real run can show.
 | `01-single-lab.json` | One question becomes one lab without giving the answer away |
 | `02-docs-only.json` | A topic that cannot be reproduced becomes a docs-only entry |
 | `03-grouped-batch.json` | Grouping, deriving a missing answer, documented values, real prices |
+| `04-diverse-batch.json` | Unrelated topics become separate entries, pinned public images, no AWS writes while authoring |
 
 ## Running one
 

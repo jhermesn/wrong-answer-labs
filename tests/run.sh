@@ -4,7 +4,7 @@
 #   2. guard rule unit tests (tests/rules/<rules>.test.yaml) and their coverage
 #   3. validate_lab.sh accepts the examples and rejects broken labs
 #   4. new_lab.sh scaffolds labs and rejects bad input
-#   5. price.sh rejects bad input
+#   5. price.sh and image_digest.sh reject bad input
 #   6. selftest.sh refuses to deploy unvalidated labs or adopt existing stacks
 set -uo pipefail
 
@@ -202,6 +202,12 @@ expect_exit "rejects a slug that is not kebab-case" 64 bash "$NEW_LAB" SAA-C03 N
 suite "price.sh"
 expect_exit "rejects a missing service code" 1 bash "$SKILL_DIR/scripts/price.sh"
 expect_exit "rejects a malformed filter" 64 bash "$SKILL_DIR/scripts/price.sh" AWSQueueService queueType
+
+suite "image_digest.sh"
+expect_exit "rejects an image outside Amazon ECR Public" 64 \
+  bash "$SKILL_DIR/scripts/image_digest.sh" docker.io/library/nginx:latest
+expect_exit "rejects an image without a tag" 64 \
+  bash "$SKILL_DIR/scripts/image_digest.sh" public.ecr.aws/docker/library/nginx
 
 suite "selftest.sh (fake AWS CLI)"
 install_fake_aws

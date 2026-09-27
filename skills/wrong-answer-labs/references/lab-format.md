@@ -13,6 +13,7 @@ Every lab this skill produces follows that shape.
 - Scenario
 - Challenges
 - Template (`template.yaml`)
+- Apps, images and code
 - Grader (`check.sh`)
 - Cleanup (`cleanup.sh`)
 - Solution (`solution/README.md` + `solution/solve.sh`)
@@ -93,6 +94,24 @@ Rules:
 - Every resource must be deletable by `delete-stack`: `DeletionPolicy: Delete`,
   no deletion protection, `EmptyOnDelete: true` on ECR repositories.
 - Target deploy time ≤ 15 min; state it in the README.
+
+## Apps, images and code
+
+When a scenario needs something running (a web page, a batch job, sample
+data), use the first option that works:
+
+1. **No app at all**: a managed feature or the service's own test action
+   (an ALB fixed response, an EventBridge test event).
+2. **Operating system packages** from the AMI's repositories in `UserData`
+   (`dnf install -y httpd`), with at most a one-line page of content.
+3. **Official container images from Amazon ECR Public**
+   (`public.ecr.aws/docker/library/...` or AWS-published images), configured
+   with `Command`/`Environment`. Pin them by digest:
+   `bash <skill>/scripts/image_digest.sh public.ecr.aws/<repository>:<tag>`
+   prints the reference to use; the security rules reject tags. A template
+   cannot build or push images, so never plan a custom image.
+4. **Handwritten code** only for glue nothing above provides: inline
+   (`ZipFile`, `UserData`), under about 30 lines, no third-party dependencies.
 
 ## Grader (`check.sh`)
 
