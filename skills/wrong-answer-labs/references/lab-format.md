@@ -6,6 +6,17 @@ scenario and a set of challenges, solves them in the Console with **no hints and
 no step-by-step**, and is graded automatically on the resulting configuration.
 Every lab this skill produces follows that shape.
 
+## Contents
+
+- Lab directory
+- Anchors (the validator depends on them)
+- Scenario
+- Challenges
+- Template (`template.yaml`)
+- Grader (`check.sh`)
+- Cleanup (`cleanup.sh`)
+- Solution (`solution/README.md` + `solution/solve.sh`)
+
 ## Lab directory
 
 ```
@@ -50,8 +61,9 @@ The compliance team requires that any object deleted from the `reports` bucket
 (stack output `ReportsBucketName`) can be restored for 30 days.
 
 **Acceptance criteria**
-- Versioning is enabled on the reports bucket.
-- A lifecycle rule named `expire-noncurrent-30d` permanently deletes noncurrent versions after 30 days.
+- A deleted or overwritten report can be restored from the bucket itself.
+- A rule named `expire-noncurrent-30d` permanently removes old copies 30 days
+  after they stop being current.
 ```
 
 Rules:
@@ -71,7 +83,8 @@ Rules:
   `AWS::Region`, `!GetAZs`, SSM public parameters for AMIs.
 - Let CloudFormation generate physical names; expose what the learner needs as
   **Outputs** (`ReportsBucketName`, `AppUrl`...).
-- Sizes are literals (no parameters) and within `rules/lab-cost.guard`.
+- Only resource types on the allowlist in `rules/lab-cost.guard`, with literal
+  sizes (no parameters) inside its limits. Never custom resources.
 - Security baseline from `rules/lab-security.guard`. A rule is suppressed only
   when the insecure setting is itself the challenge, via
   `Metadata.guard.SuppressedRules` on that one resource.
@@ -87,15 +100,20 @@ One `check` line per acceptance criterion:
 
 ```bash
 # check <challenge-number> "<description>" "<expected stdout>" <command...>
-check 1 "Versioning enabled on the reports bucket" "Enabled" \
+check 1 "Deleted or overwritten reports can be restored" "Enabled" \
   aws s3api get-bucket-versioning --bucket "$(stack_output ReportsBucketName)" \
     --query Status --output text
 
-check 1 "Lifecycle expires noncurrent versions after 30 days" "30" \
+check 1 "Old copies are removed 30 days after they stop being current" "30" \
   aws s3api get-bucket-lifecycle-configuration --bucket "$(stack_output ReportsBucketName)" \
     --query "Rules[?ID=='expire-noncurrent-30d'] | [0].NoncurrentVersionExpiration.NoncurrentDays" --output text
 ```
 
+- Read-only: only `get-*`, `describe-*`, `list-*`, `head-*`, `simulate-*`,
+  `lookup-*`, `search-*`, `filter-*`, `batch-get-*`, `query`, `scan` and `ls`
+  operations, written as `aws <service> <operation> [options]`. The validator
+  rejects anything else, because the grader runs in the learner's account on
+  every check.
 - Read state with the AWS CLI; filter with `--query` (JMESPath) down to one
   scalar compared by exact match. For a boolean condition, make the query
   return `true`/`false` (e.g. `length(...) > \`0\``).

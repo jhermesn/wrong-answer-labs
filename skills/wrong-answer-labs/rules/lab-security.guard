@@ -62,37 +62,75 @@ rule SEC_EC2_IMDSV2 when %ec2_instances !empty {
     >>
 }
 
-let iam_policy_holders = Resources.*[ Type in ['AWS::IAM::Role', 'AWS::IAM::User', 'AWS::IAM::Group']
-    Properties.Policies exists ]
-rule SEC_IAM_NO_ADMIN_INLINE when %iam_policy_holders !empty {
-    %iam_policy_holders.Properties.Policies[*].PolicyDocument.Statement[ Effect == 'Allow' ] {
-        Action != '*'
-        Action[*] != '*'
-        <<
-            Violation: inline IAM policy grants Action "*". Scope actions to what the lab needs.
-        >>
+# IAM allows Statement to be a list of statements or a single statement object,
+# so each shape needs its own query.
+let inline_docs = Resources.*[ Type in ['AWS::IAM::Role', 'AWS::IAM::User', 'AWS::IAM::Group'] ].Properties.Policies[*].PolicyDocument
+let inline_allows_in_list = %inline_docs[ Statement is_list ].Statement[ Effect == 'Allow' ]
+let inline_allows_as_object = %inline_docs[ Statement is_struct
+    Statement.Effect == 'Allow' ].Statement
+rule SEC_IAM_NO_ADMIN_INLINE when %inline_allows_in_list !empty or %inline_allows_as_object !empty {
+    when %inline_allows_in_list !empty {
+        %inline_allows_in_list {
+            Action != '*'
+            Action[*] != '*'
+            <<
+                Violation: inline IAM policy grants Action "*". Scope actions to what the lab needs.
+            >>
+        }
+    }
+    when %inline_allows_as_object !empty {
+        %inline_allows_as_object {
+            Action != '*'
+            Action[*] != '*'
+            <<
+                Violation: inline IAM policy grants Action "*". Scope actions to what the lab needs.
+            >>
+        }
     }
 }
 
-let managed_policies = Resources.*[ Type == 'AWS::IAM::ManagedPolicy' or Type == 'AWS::IAM::Policy' ]
-rule SEC_IAM_NO_ADMIN_POLICY when %managed_policies !empty {
-    %managed_policies.Properties.PolicyDocument.Statement[ Effect == 'Allow' ] {
-        Action != '*'
-        Action[*] != '*'
-        <<
-            Violation: IAM policy grants Action "*". Scope actions to what the lab needs.
-        >>
+let policy_docs = Resources.*[ Type == 'AWS::IAM::ManagedPolicy' or Type == 'AWS::IAM::Policy' ].Properties.PolicyDocument
+let policy_allows_in_list = %policy_docs[ Statement is_list ].Statement[ Effect == 'Allow' ]
+let policy_allows_as_object = %policy_docs[ Statement is_struct
+    Statement.Effect == 'Allow' ].Statement
+rule SEC_IAM_NO_ADMIN_POLICY when %policy_allows_in_list !empty or %policy_allows_as_object !empty {
+    when %policy_allows_in_list !empty {
+        %policy_allows_in_list {
+            Action != '*'
+            Action[*] != '*'
+            <<
+                Violation: IAM policy grants Action "*". Scope actions to what the lab needs.
+            >>
+        }
+    }
+    when %policy_allows_as_object !empty {
+        %policy_allows_as_object {
+            Action != '*'
+            Action[*] != '*'
+            <<
+                Violation: IAM policy grants Action "*". Scope actions to what the lab needs.
+            >>
+        }
     }
 }
 
-let iam_principals = Resources.*[ Type in ['AWS::IAM::Role', 'AWS::IAM::User', 'AWS::IAM::Group']
-    Properties.ManagedPolicyArns exists ]
-rule SEC_IAM_NO_ADMINISTRATOR_ACCESS when %iam_principals !empty {
-    %iam_principals.Properties.ManagedPolicyArns[*] != 'arn:aws:iam::aws:policy/AdministratorAccess'
-    %iam_principals.Properties.ManagedPolicyArns[*] != 'arn:aws:iam::aws:policy/PowerUserAccess'
-    <<
-        Violation: do not attach AdministratorAccess/PowerUserAccess to lab principals.
-    >>
+# ARNs appear as plain strings or as Fn::Sub with ${AWS::Partition}.
+let principal_arns = Resources.*[ Type in ['AWS::IAM::Role', 'AWS::IAM::User', 'AWS::IAM::Group'] ].Properties.ManagedPolicyArns
+let literal_policy_arns = %principal_arns[ this is_string ]
+let sub_policy_arns = %principal_arns[ this is_struct ].'Fn::Sub'
+rule SEC_IAM_NO_ADMINISTRATOR_ACCESS when %literal_policy_arns !empty or %sub_policy_arns !empty {
+    when %literal_policy_arns !empty {
+        %literal_policy_arns != /:policy\/(AdministratorAccess|PowerUserAccess)$/
+        <<
+            Violation: do not attach AdministratorAccess/PowerUserAccess to lab principals.
+        >>
+    }
+    when %sub_policy_arns !empty {
+        %sub_policy_arns != /:policy\/(AdministratorAccess|PowerUserAccess)$/
+        <<
+            Violation: do not attach AdministratorAccess/PowerUserAccess to lab principals.
+        >>
+    }
 }
 
 let access_keys = Resources.*[ Type == 'AWS::IAM::AccessKey' ]
@@ -122,7 +160,7 @@ rule SEC_RDS_NOT_PUBLIC when %db_publicly_accessible !empty {
 
 let secret_parameters = Parameters[ keys == /(?i)(password|secret|token|apikey)/ ]
 rule SEC_SECRET_PARAMETERS_NOECHO when %secret_parameters !empty {
-    %secret_parameters.NoEcho == true
+    %secret_parameters.NoEcho in [true, 'true']
     <<
         Violation: secret-like parameters must set NoEcho: true (prefer Secrets Manager dynamic references).
     >>

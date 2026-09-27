@@ -7,7 +7,7 @@
   "description": "Study and DevOps skills by jhermesn",
   "plugins": [
     {
-      "name": "aws-exam-questions-to-labs",
+      "name": "wrong-answer-labs",
       "source": "./",
       "description": "Turn AWS Certification questions you got wrong into hands-on CloudFormation labs with an automated grader.",
       "category": "education",

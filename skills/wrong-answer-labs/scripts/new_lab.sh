@@ -2,7 +2,7 @@
 # Creates a lab skeleton from the skill assets.
 # Usage: bash new_lab.sh <CERT-CODE> <slug> [--docs-only] [--root <labs-dir>]
 #   CERT-CODE: exam code as in the exam guide, e.g. SAA-C03, SOA-C03, DVA-C02
-#   slug:      kebab-case topic, e.g. s3-replicacao-versionamento
+#   slug:      kebab-case topic, e.g. s3-replication-versioning
 set -euo pipefail
 
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

@@ -1,0 +1,1098 @@
+# Unit tests for rules/lab-cost.guard, run with `cfn-guard test`.
+# Each FAIL case breaks exactly one condition so a broken condition cannot hide
+# behind another one. SKIP means the rule found nothing to evaluate.
+# Whether every resource type named in the rules exists is checked separately
+# by tests/run.sh through cfn-lint.
+
+# --- COST_ALLOWED_RESOURCE_TYPES --------------------------------------------
+
+- name: template with only reviewed resource types passes
+  input:
+    Resources:
+      Bucket: {Type: AWS::S3::Bucket}
+      Table: {Type: AWS::DynamoDB::Table}
+      Queue: {Type: AWS::SQS::Queue}
+  expectations:
+    rules: {COST_ALLOWED_RESOURCE_TYPES: PASS}
+
+- name: provisioned redshift cluster is not allowed
+  input:
+    Resources:
+      Warehouse: {Type: AWS::Redshift::Cluster}
+  expectations:
+    rules: {COST_ALLOWED_RESOURCE_TYPES: FAIL}
+
+- name: unreviewed memorydb cluster is not allowed
+  input:
+    Resources:
+      Memory: {Type: AWS::MemoryDB::Cluster}
+  expectations:
+    rules: {COST_ALLOWED_RESOURCE_TYPES: FAIL}
+
+- name: legacy elasticsearch domain is not allowed
+  input:
+    Resources:
+      Search: {Type: AWS::Elasticsearch::Domain}
+  expectations:
+    rules: {COST_ALLOWED_RESOURCE_TYPES: FAIL}
+
+- name: custom resource type is not allowed
+  input:
+    Resources:
+      Seeder: {Type: 'Custom::SeedData', Properties: {ServiceToken: arn:aws:lambda:us-east-1:123456789012:function:seed}}
+  expectations:
+    rules: {COST_ALLOWED_RESOURCE_TYPES: FAIL}
+
+- name: generic cloudformation custom resource is not allowed
+  input:
+    Resources:
+      Seeder: {Type: AWS::CloudFormation::CustomResource}
+  expectations:
+    rules: {COST_ALLOWED_RESOURCE_TYPES: FAIL}
+
+- name: one unreviewed type among allowed ones is not allowed
+  input:
+    Resources:
+      Bucket: {Type: AWS::S3::Bucket}
+      Dax: {Type: AWS::DAX::Cluster}
+  expectations:
+    rules: {COST_ALLOWED_RESOURCE_TYPES: FAIL}
+
+# --- COST_EC2_INSTANCE_TYPE -------------------------------------------------
+
+- name: t3.micro instance passes
+  input:
+    Resources:
+      Vm: {Type: AWS::EC2::Instance, Properties: {InstanceType: t3.micro}}
+  expectations:
+    rules: {COST_EC2_INSTANCE_TYPE: PASS}
+
+- name: t4g.small instance passes as the largest allowed size
+  input:
+    Resources:
+      Vm: {Type: AWS::EC2::Instance, Properties: {InstanceType: t4g.small}}
+  expectations:
+    rules: {COST_EC2_INSTANCE_TYPE: PASS}
+
+- name: t3.medium instance fails as one size above the limit
+  input:
+    Resources:
+      Vm: {Type: AWS::EC2::Instance, Properties: {InstanceType: t3.medium}}
+  expectations:
+    rules: {COST_EC2_INSTANCE_TYPE: FAIL}
+
+- name: m5.large instance fails
+  input:
+    Resources:
+      Vm: {Type: AWS::EC2::Instance, Properties: {InstanceType: m5.large}}
+  expectations:
+    rules: {COST_EC2_INSTANCE_TYPE: FAIL}
+
+- name: instance type from a parameter fails because sizes must be literal
+  input:
+    Resources:
+      Vm: {Type: AWS::EC2::Instance, Properties: {InstanceType: {Ref: Size}}}
+  expectations:
+    rules: {COST_EC2_INSTANCE_TYPE: FAIL}
+
+- name: instance without InstanceType fails because the default is not validated
+  input:
+    Resources:
+      Vm: {Type: AWS::EC2::Instance, Properties: {ImageId: ami-12345678}}
+  expectations:
+    rules: {COST_EC2_INSTANCE_TYPE: FAIL}
+
+- name: template without instances skips the instance type rule
+  input:
+    Resources:
+      Bucket: {Type: AWS::S3::Bucket}
+  expectations:
+    rules: {COST_EC2_INSTANCE_TYPE: SKIP}
+
+# --- COST_LAUNCH_TEMPLATE_INSTANCE_TYPE -------------------------------------
+
+- name: launch template with t3.small passes
+  input:
+    Resources:
+      Lt: {Type: AWS::EC2::LaunchTemplate, Properties: {LaunchTemplateData: {InstanceType: t3.small}}}
+  expectations:
+    rules: {COST_LAUNCH_TEMPLATE_INSTANCE_TYPE: PASS}
+
+- name: launch template with c5.xlarge fails
+  input:
+    Resources:
+      Lt: {Type: AWS::EC2::LaunchTemplate, Properties: {LaunchTemplateData: {InstanceType: c5.xlarge}}}
+  expectations:
+    rules: {COST_LAUNCH_TEMPLATE_INSTANCE_TYPE: FAIL}
+
+- name: launch template without InstanceType is skipped
+  input:
+    Resources:
+      Lt: {Type: AWS::EC2::LaunchTemplate, Properties: {LaunchTemplateData: {ImageId: ami-12345678}}}
+  expectations:
+    rules: {COST_LAUNCH_TEMPLATE_INSTANCE_TYPE: SKIP}
+
+# --- COST_ASG_MAX_SIZE ------------------------------------------------------
+
+- name: auto scaling group with MaxSize 3 passes
+  input:
+    Resources:
+      Asg: {Type: AWS::AutoScaling::AutoScalingGroup, Properties: {MinSize: '1', MaxSize: '3'}}
+  expectations:
+    rules: {COST_ASG_MAX_SIZE: PASS}
+
+- name: auto scaling group with numeric MaxSize 2 passes
+  input:
+    Resources:
+      Asg: {Type: AWS::AutoScaling::AutoScalingGroup, Properties: {MinSize: 1, MaxSize: 2}}
+  expectations:
+    rules: {COST_ASG_MAX_SIZE: PASS}
+
+- name: auto scaling group with MaxSize 4 fails
+  input:
+    Resources:
+      Asg: {Type: AWS::AutoScaling::AutoScalingGroup, Properties: {MinSize: '1', MaxSize: '4'}}
+  expectations:
+    rules: {COST_ASG_MAX_SIZE: FAIL}
+
+- name: auto scaling group with MaxSize from a parameter fails
+  input:
+    Resources:
+      Asg: {Type: AWS::AutoScaling::AutoScalingGroup, Properties: {MinSize: '1', MaxSize: {Ref: Max}}}
+  expectations:
+    rules: {COST_ASG_MAX_SIZE: FAIL}
+
+# --- COST_EKS_NODEGROUP -----------------------------------------------------
+
+- name: eks nodegroup with t3.medium and two nodes passes
+  input:
+    Resources:
+      Nodes: {Type: AWS::EKS::Nodegroup, Properties: {InstanceTypes: [t3.medium], ScalingConfig: {MaxSize: 2}}}
+  expectations:
+    rules: {COST_EKS_NODEGROUP: PASS}
+
+- name: eks nodegroup with m5.large fails
+  input:
+    Resources:
+      Nodes: {Type: AWS::EKS::Nodegroup, Properties: {InstanceTypes: [m5.large], ScalingConfig: {MaxSize: 2}}}
+  expectations:
+    rules: {COST_EKS_NODEGROUP: FAIL}
+
+- name: eks nodegroup with three nodes fails
+  input:
+    Resources:
+      Nodes: {Type: AWS::EKS::Nodegroup, Properties: {InstanceTypes: [t3.small], ScalingConfig: {MaxSize: 3}}}
+  expectations:
+    rules: {COST_EKS_NODEGROUP: FAIL}
+
+- name: eks nodegroup without InstanceTypes fails because sizes must be explicit
+  input:
+    Resources:
+      Nodes: {Type: AWS::EKS::Nodegroup, Properties: {ScalingConfig: {MaxSize: 2}}}
+  expectations:
+    rules: {COST_EKS_NODEGROUP: FAIL}
+
+# --- COST_EBS_VOLUME --------------------------------------------------------
+
+- name: 30 GiB gp3 volume passes
+  input:
+    Resources:
+      Disk: {Type: AWS::EC2::Volume, Properties: {Size: 30, VolumeType: gp3}}
+  expectations:
+    rules: {COST_EBS_VOLUME: PASS}
+
+- name: volume without VolumeType passes
+  input:
+    Resources:
+      Disk: {Type: AWS::EC2::Volume, Properties: {Size: 8}}
+  expectations:
+    rules: {COST_EBS_VOLUME: PASS}
+
+- name: 31 GiB volume fails
+  input:
+    Resources:
+      Disk: {Type: AWS::EC2::Volume, Properties: {Size: 31, VolumeType: gp3}}
+  expectations:
+    rules: {COST_EBS_VOLUME: FAIL}
+
+- name: io2 volume fails
+  input:
+    Resources:
+      Disk: {Type: AWS::EC2::Volume, Properties: {Size: 8, VolumeType: io2}}
+  expectations:
+    rules: {COST_EBS_VOLUME: FAIL}
+
+# --- COST_SINGLE_NAT_GATEWAY ------------------------------------------------
+
+- name: one nat gateway passes
+  input:
+    Resources:
+      Nat: {Type: AWS::EC2::NatGateway}
+  expectations:
+    rules: {COST_SINGLE_NAT_GATEWAY: PASS}
+
+- name: two nat gateways fail
+  input:
+    Resources:
+      NatA: {Type: AWS::EC2::NatGateway}
+      NatB: {Type: AWS::EC2::NatGateway}
+  expectations:
+    rules: {COST_SINGLE_NAT_GATEWAY: FAIL}
+
+- name: template without nat gateways skips the nat rule
+  input:
+    Resources:
+      Vpc: {Type: AWS::EC2::VPC}
+  expectations:
+    rules: {COST_SINGLE_NAT_GATEWAY: SKIP}
+
+# --- COST_TGW_ATTACHMENTS ---------------------------------------------------
+
+- name: three transit gateway attachments pass
+  input:
+    Resources:
+      A: {Type: AWS::EC2::TransitGatewayAttachment}
+      B: {Type: AWS::EC2::TransitGatewayAttachment}
+      C: {Type: AWS::EC2::TransitGatewayVpcAttachment}
+  expectations:
+    rules: {COST_TGW_ATTACHMENTS: PASS}
+
+- name: four transit gateway attachments across both types fail
+  input:
+    Resources:
+      A: {Type: AWS::EC2::TransitGatewayAttachment}
+      B: {Type: AWS::EC2::TransitGatewayAttachment}
+      C: {Type: AWS::EC2::TransitGatewayVpcAttachment}
+      D: {Type: AWS::EC2::TransitGatewayVpcAttachment}
+  expectations:
+    rules: {COST_TGW_ATTACHMENTS: FAIL}
+
+# --- COST_RDS_INSTANCE ------------------------------------------------------
+
+- name: db.t4g.micro instance with DeletionPolicy Delete passes
+  input:
+    Resources:
+      Db: {Type: AWS::RDS::DBInstance, DeletionPolicy: Delete, Properties: {DBInstanceClass: db.t4g.micro}}
+  expectations:
+    rules: {COST_RDS_INSTANCE: PASS}
+
+- name: rds instance with DeletionProtection false passes
+  input:
+    Resources:
+      Db: {Type: AWS::RDS::DBInstance, DeletionPolicy: Delete, Properties: {DBInstanceClass: db.t3.small, DeletionProtection: false}}
+  expectations:
+    rules: {COST_RDS_INSTANCE: PASS}
+
+- name: db.m5.large instance fails
+  input:
+    Resources:
+      Db: {Type: AWS::RDS::DBInstance, DeletionPolicy: Delete, Properties: {DBInstanceClass: db.m5.large}}
+  expectations:
+    rules: {COST_RDS_INSTANCE: FAIL}
+
+- name: rds instance with io1 storage fails
+  input:
+    Resources:
+      Db: {Type: AWS::RDS::DBInstance, DeletionPolicy: Delete, Properties: {DBInstanceClass: db.t3.micro, StorageType: io1}}
+  expectations:
+    rules: {COST_RDS_INSTANCE: FAIL}
+
+- name: rds instance with provisioned Iops fails
+  input:
+    Resources:
+      Db: {Type: AWS::RDS::DBInstance, DeletionPolicy: Delete, Properties: {DBInstanceClass: db.t3.micro, StorageType: gp3, Iops: 3000}}
+  expectations:
+    rules: {COST_RDS_INSTANCE: FAIL}
+
+- name: rds instance without DeletionPolicy fails because the default snapshot keeps billing
+  input:
+    Resources:
+      Db: {Type: AWS::RDS::DBInstance, Properties: {DBInstanceClass: db.t3.micro}}
+  expectations:
+    rules: {COST_RDS_INSTANCE: FAIL}
+
+- name: rds instance with DeletionProtection true fails
+  input:
+    Resources:
+      Db: {Type: AWS::RDS::DBInstance, DeletionPolicy: Delete, Properties: {DBInstanceClass: db.t3.micro, DeletionProtection: true}}
+  expectations:
+    rules: {COST_RDS_INSTANCE: FAIL}
+
+# --- COST_RDS_STORAGE -------------------------------------------------------
+
+- name: rds instance with 20 GiB as a string passes
+  input:
+    Resources:
+      Db: {Type: AWS::RDS::DBInstance, Properties: {AllocatedStorage: '20'}}
+  expectations:
+    rules: {COST_RDS_STORAGE: PASS}
+
+- name: rds instance with 20 GiB as a number passes
+  input:
+    Resources:
+      Db: {Type: AWS::RDS::DBInstance, Properties: {AllocatedStorage: 20}}
+  expectations:
+    rules: {COST_RDS_STORAGE: PASS}
+
+- name: rds instance with 100 GiB fails
+  input:
+    Resources:
+      Db: {Type: AWS::RDS::DBInstance, Properties: {AllocatedStorage: '100'}}
+  expectations:
+    rules: {COST_RDS_STORAGE: FAIL}
+
+- name: aurora member instance without AllocatedStorage is skipped
+  input:
+    Resources:
+      Db: {Type: AWS::RDS::DBInstance, Properties: {DBClusterIdentifier: cluster}}
+  expectations:
+    rules: {COST_RDS_STORAGE: SKIP}
+
+# --- COST_AURORA_CLUSTER ----------------------------------------------------
+
+- name: aurora cluster with DeletionPolicy Delete passes
+  input:
+    Resources:
+      Cluster: {Type: AWS::RDS::DBCluster, DeletionPolicy: Delete, Properties: {Engine: aurora-mysql}}
+  expectations:
+    rules: {COST_AURORA_CLUSTER: PASS}
+
+- name: aurora cluster without DeletionPolicy fails
+  input:
+    Resources:
+      Cluster: {Type: AWS::RDS::DBCluster, Properties: {Engine: aurora-mysql}}
+  expectations:
+    rules: {COST_AURORA_CLUSTER: FAIL}
+
+- name: aurora cluster with DeletionProtection true fails
+  input:
+    Resources:
+      Cluster: {Type: AWS::RDS::DBCluster, DeletionPolicy: Delete, Properties: {DeletionProtection: true}}
+  expectations:
+    rules: {COST_AURORA_CLUSTER: FAIL}
+
+- name: multi-az db cluster with DBClusterInstanceClass fails
+  input:
+    Resources:
+      Cluster: {Type: AWS::RDS::DBCluster, DeletionPolicy: Delete, Properties: {DBClusterInstanceClass: db.m6gd.large}}
+  expectations:
+    rules: {COST_AURORA_CLUSTER: FAIL}
+
+# --- COST_AURORA_SERVERLESS_CAPACITY ----------------------------------------
+
+- name: aurora serverless v2 with MaxCapacity 2 passes
+  input:
+    Resources:
+      Cluster: {Type: AWS::RDS::DBCluster, Properties: {ServerlessV2ScalingConfiguration: {MinCapacity: 0.5, MaxCapacity: 2}}}
+  expectations:
+    rules: {COST_AURORA_SERVERLESS_CAPACITY: PASS}
+
+- name: aurora serverless v2 with MaxCapacity 4 fails
+  input:
+    Resources:
+      Cluster: {Type: AWS::RDS::DBCluster, Properties: {ServerlessV2ScalingConfiguration: {MinCapacity: 0.5, MaxCapacity: 4}}}
+  expectations:
+    rules: {COST_AURORA_SERVERLESS_CAPACITY: FAIL}
+
+- name: provisioned aurora cluster skips the serverless capacity rule
+  input:
+    Resources:
+      Cluster: {Type: AWS::RDS::DBCluster, Properties: {Engine: aurora-postgresql}}
+  expectations:
+    rules: {COST_AURORA_SERVERLESS_CAPACITY: SKIP}
+
+# --- COST_DOCDB_NEPTUNE_INSTANCE --------------------------------------------
+
+- name: documentdb db.t3.medium instance passes
+  input:
+    Resources:
+      Doc: {Type: AWS::DocDB::DBInstance, Properties: {DBInstanceClass: db.t3.medium}}
+  expectations:
+    rules: {COST_DOCDB_NEPTUNE_INSTANCE: PASS}
+
+- name: neptune db.r5.large instance fails
+  input:
+    Resources:
+      Graph: {Type: AWS::Neptune::DBInstance, Properties: {DBInstanceClass: db.r5.large}}
+  expectations:
+    rules: {COST_DOCDB_NEPTUNE_INSTANCE: FAIL}
+
+# --- COST_DOCDB_NEPTUNE_CLUSTER ---------------------------------------------
+
+- name: neptune cluster with DeletionPolicy Delete passes
+  input:
+    Resources:
+      Graph: {Type: AWS::Neptune::DBCluster, DeletionPolicy: Delete}
+  expectations:
+    rules: {COST_DOCDB_NEPTUNE_CLUSTER: PASS}
+
+- name: documentdb cluster without DeletionPolicy fails
+  input:
+    Resources:
+      Doc: {Type: AWS::DocDB::DBCluster}
+  expectations:
+    rules: {COST_DOCDB_NEPTUNE_CLUSTER: FAIL}
+
+# --- COST_ELASTICACHE_NODE --------------------------------------------------
+
+- name: elasticache cluster with one cache.t4g.micro node passes
+  input:
+    Resources:
+      Cache: {Type: AWS::ElastiCache::CacheCluster, Properties: {CacheNodeType: cache.t4g.micro, NumCacheNodes: 1}}
+  expectations:
+    rules: {COST_ELASTICACHE_NODE: PASS}
+
+- name: elasticache cluster with cache.r6g.large fails
+  input:
+    Resources:
+      Cache: {Type: AWS::ElastiCache::CacheCluster, Properties: {CacheNodeType: cache.r6g.large, NumCacheNodes: 1}}
+  expectations:
+    rules: {COST_ELASTICACHE_NODE: FAIL}
+
+- name: elasticache cluster with three nodes fails
+  input:
+    Resources:
+      Cache: {Type: AWS::ElastiCache::CacheCluster, Properties: {CacheNodeType: cache.t3.micro, NumCacheNodes: 3}}
+  expectations:
+    rules: {COST_ELASTICACHE_NODE: FAIL}
+
+# --- COST_ELASTICACHE_REPLICATION_GROUP -------------------------------------
+
+- name: replication group with cache.t3.micro passes
+  input:
+    Resources:
+      Group: {Type: AWS::ElastiCache::ReplicationGroup, Properties: {CacheNodeType: cache.t3.micro}}
+  expectations:
+    rules: {COST_ELASTICACHE_REPLICATION_GROUP: PASS}
+
+- name: replication group with cache.m5.large fails
+  input:
+    Resources:
+      Group: {Type: AWS::ElastiCache::ReplicationGroup, Properties: {CacheNodeType: cache.m5.large}}
+  expectations:
+    rules: {COST_ELASTICACHE_REPLICATION_GROUP: FAIL}
+
+- name: replication group with a primary and one replica passes
+  input:
+    Resources:
+      Group: {Type: AWS::ElastiCache::ReplicationGroup, Properties: {CacheNodeType: cache.t4g.micro, NumCacheClusters: 2}}
+  expectations:
+    rules: {COST_ELASTICACHE_REPLICATION_GROUP: PASS}
+
+- name: replication group with three cache clusters fails
+  input:
+    Resources:
+      Group: {Type: AWS::ElastiCache::ReplicationGroup, Properties: {CacheNodeType: cache.t3.micro, NumCacheClusters: 3}}
+  expectations:
+    rules: {COST_ELASTICACHE_REPLICATION_GROUP: FAIL}
+
+- name: replication group with two shards fails
+  input:
+    Resources:
+      Group: {Type: AWS::ElastiCache::ReplicationGroup, Properties: {CacheNodeType: cache.t3.micro, NumNodeGroups: 2}}
+  expectations:
+    rules: {COST_ELASTICACHE_REPLICATION_GROUP: FAIL}
+
+- name: replication group with two replicas per shard fails
+  input:
+    Resources:
+      Group: {Type: AWS::ElastiCache::ReplicationGroup, Properties: {CacheNodeType: cache.t3.micro, ReplicasPerNodeGroup: 2}}
+  expectations:
+    rules: {COST_ELASTICACHE_REPLICATION_GROUP: FAIL}
+
+# --- COST_OPENSEARCH_DOMAIN -------------------------------------------------
+
+- name: single t3.small.search node with 10 GiB passes
+  input:
+    Resources:
+      Search:
+        Type: AWS::OpenSearchService::Domain
+        Properties:
+          ClusterConfig: {InstanceType: t3.small.search, InstanceCount: 1}
+          EBSOptions: {EBSEnabled: true, VolumeSize: 10}
+  expectations:
+    rules: {COST_OPENSEARCH_DOMAIN: PASS}
+
+- name: opensearch domain with m6g.large.search fails
+  input:
+    Resources:
+      Search:
+        Type: AWS::OpenSearchService::Domain
+        Properties:
+          ClusterConfig: {InstanceType: m6g.large.search, InstanceCount: 1}
+          EBSOptions: {EBSEnabled: true, VolumeSize: 10}
+  expectations:
+    rules: {COST_OPENSEARCH_DOMAIN: FAIL}
+
+- name: opensearch domain with two nodes fails
+  input:
+    Resources:
+      Search:
+        Type: AWS::OpenSearchService::Domain
+        Properties:
+          ClusterConfig: {InstanceType: t3.small.search, InstanceCount: 2}
+          EBSOptions: {EBSEnabled: true, VolumeSize: 10}
+  expectations:
+    rules: {COST_OPENSEARCH_DOMAIN: FAIL}
+
+- name: opensearch domain with a dedicated master fails
+  input:
+    Resources:
+      Search:
+        Type: AWS::OpenSearchService::Domain
+        Properties:
+          ClusterConfig: {InstanceType: t3.small.search, InstanceCount: 1, DedicatedMasterEnabled: true}
+          EBSOptions: {EBSEnabled: true, VolumeSize: 10}
+  expectations:
+    rules: {COST_OPENSEARCH_DOMAIN: FAIL}
+
+- name: opensearch domain with 20 GiB of storage fails
+  input:
+    Resources:
+      Search:
+        Type: AWS::OpenSearchService::Domain
+        Properties:
+          ClusterConfig: {InstanceType: t3.small.search, InstanceCount: 1}
+          EBSOptions: {EBSEnabled: true, VolumeSize: 20}
+  expectations:
+    rules: {COST_OPENSEARCH_DOMAIN: FAIL}
+
+# --- COST_DYNAMODB_PROVISIONED ----------------------------------------------
+
+- name: provisioned table with 5 RCU and 5 WCU passes
+  input:
+    Resources:
+      Table: {Type: AWS::DynamoDB::Table, Properties: {ProvisionedThroughput: {ReadCapacityUnits: 5, WriteCapacityUnits: 5}}}
+  expectations:
+    rules: {COST_DYNAMODB_PROVISIONED: PASS}
+
+- name: provisioned table with 10 RCU fails
+  input:
+    Resources:
+      Table: {Type: AWS::DynamoDB::Table, Properties: {ProvisionedThroughput: {ReadCapacityUnits: 10, WriteCapacityUnits: 5}}}
+  expectations:
+    rules: {COST_DYNAMODB_PROVISIONED: FAIL}
+
+- name: provisioned table with 10 WCU fails
+  input:
+    Resources:
+      Table: {Type: AWS::DynamoDB::Table, Properties: {ProvisionedThroughput: {ReadCapacityUnits: 5, WriteCapacityUnits: 10}}}
+  expectations:
+    rules: {COST_DYNAMODB_PROVISIONED: FAIL}
+
+- name: on-demand table skips the provisioned throughput rule
+  input:
+    Resources:
+      Table: {Type: AWS::DynamoDB::Table, Properties: {BillingMode: PAY_PER_REQUEST}}
+  expectations:
+    rules: {COST_DYNAMODB_PROVISIONED: SKIP}
+
+# --- COST_KINESIS_SHARDS ----------------------------------------------------
+
+- name: kinesis stream with two shards passes
+  input:
+    Resources:
+      Stream: {Type: AWS::Kinesis::Stream, Properties: {ShardCount: 2}}
+  expectations:
+    rules: {COST_KINESIS_SHARDS: PASS}
+
+- name: kinesis stream with three shards fails
+  input:
+    Resources:
+      Stream: {Type: AWS::Kinesis::Stream, Properties: {ShardCount: 3}}
+  expectations:
+    rules: {COST_KINESIS_SHARDS: FAIL}
+
+- name: on-demand kinesis stream skips the shard rule
+  input:
+    Resources:
+      Stream: {Type: AWS::Kinesis::Stream, Properties: {StreamModeDetails: {StreamMode: ON_DEMAND}}}
+  expectations:
+    rules: {COST_KINESIS_SHARDS: SKIP}
+
+# --- COST_REDSHIFT_SERVERLESS -----------------------------------------------
+
+- name: redshift serverless pinned to 8 RPU passes
+  input:
+    Resources:
+      Wg: {Type: AWS::RedshiftServerless::Workgroup, Properties: {BaseCapacity: 8, MaxCapacity: 8}}
+  expectations:
+    rules: {COST_REDSHIFT_SERVERLESS: PASS}
+
+- name: redshift serverless with BaseCapacity 32 fails
+  input:
+    Resources:
+      Wg: {Type: AWS::RedshiftServerless::Workgroup, Properties: {BaseCapacity: 32, MaxCapacity: 8}}
+  expectations:
+    rules: {COST_REDSHIFT_SERVERLESS: FAIL}
+
+- name: redshift serverless without MaxCapacity fails
+  input:
+    Resources:
+      Wg: {Type: AWS::RedshiftServerless::Workgroup, Properties: {BaseCapacity: 8}}
+  expectations:
+    rules: {COST_REDSHIFT_SERVERLESS: FAIL}
+
+# --- COST_SAGEMAKER_NOTEBOOK ------------------------------------------------
+
+- name: sagemaker notebook on ml.t3.medium passes
+  input:
+    Resources:
+      Nb: {Type: AWS::SageMaker::NotebookInstance, Properties: {InstanceType: ml.t3.medium}}
+  expectations:
+    rules: {COST_SAGEMAKER_NOTEBOOK: PASS}
+
+- name: sagemaker notebook on ml.p3.2xlarge fails
+  input:
+    Resources:
+      Nb: {Type: AWS::SageMaker::NotebookInstance, Properties: {InstanceType: ml.p3.2xlarge}}
+  expectations:
+    rules: {COST_SAGEMAKER_NOTEBOOK: FAIL}
+
+# --- COST_SAGEMAKER_ENDPOINT ------------------------------------------------
+
+- name: serverless sagemaker endpoint variant passes
+  input:
+    Resources:
+      Cfg:
+        Type: AWS::SageMaker::EndpointConfig
+        Properties:
+          ProductionVariants: [{VariantName: a, ModelName: m, ServerlessConfig: {MaxConcurrency: 1, MemorySizeInMB: 1024}}]
+  expectations:
+    rules: {COST_SAGEMAKER_ENDPOINT: PASS}
+
+- name: sagemaker endpoint variant on ml.t2.medium passes
+  input:
+    Resources:
+      Cfg:
+        Type: AWS::SageMaker::EndpointConfig
+        Properties:
+          ProductionVariants: [{VariantName: a, ModelName: m, InstanceType: ml.t2.medium, InitialInstanceCount: 1}]
+  expectations:
+    rules: {COST_SAGEMAKER_ENDPOINT: PASS}
+
+- name: sagemaker endpoint variant on a gpu instance fails
+  input:
+    Resources:
+      Cfg:
+        Type: AWS::SageMaker::EndpointConfig
+        Properties:
+          ProductionVariants: [{VariantName: a, ModelName: m, InstanceType: ml.g5.xlarge, InitialInstanceCount: 1}]
+  expectations:
+    rules: {COST_SAGEMAKER_ENDPOINT: FAIL}
+
+- name: sagemaker endpoint with one cheap and one gpu variant fails
+  input:
+    Resources:
+      Cfg:
+        Type: AWS::SageMaker::EndpointConfig
+        Properties:
+          ProductionVariants:
+            - {VariantName: a, ModelName: m, InstanceType: ml.t2.medium, InitialInstanceCount: 1}
+            - {VariantName: b, ModelName: m, InstanceType: ml.g5.xlarge, InitialInstanceCount: 1}
+  expectations:
+    rules: {COST_SAGEMAKER_ENDPOINT: FAIL}
+
+# --- COST_BLOCK_DEVICE_VOLUMES ---------------------------------------------
+
+- name: instance with a 30 GiB gp3 root volume passes
+  input:
+    Resources:
+      Vm:
+        Type: AWS::EC2::Instance
+        Properties:
+          BlockDeviceMappings: [{DeviceName: /dev/xvda, Ebs: {VolumeSize: 30, VolumeType: gp3}}]
+  expectations:
+    rules: {COST_BLOCK_DEVICE_VOLUMES: PASS}
+
+- name: instance with a 16 TB root volume fails
+  input:
+    Resources:
+      Vm:
+        Type: AWS::EC2::Instance
+        Properties:
+          BlockDeviceMappings: [{DeviceName: /dev/xvda, Ebs: {VolumeSize: 16000, VolumeType: gp3}}]
+  expectations:
+    rules: {COST_BLOCK_DEVICE_VOLUMES: FAIL}
+
+- name: instance with an io2 volume fails
+  input:
+    Resources:
+      Vm:
+        Type: AWS::EC2::Instance
+        Properties:
+          BlockDeviceMappings: [{DeviceName: /dev/xvda, Ebs: {VolumeSize: 8, VolumeType: io2}}]
+  expectations:
+    rules: {COST_BLOCK_DEVICE_VOLUMES: FAIL}
+
+- name: launch template with a 100 GiB volume fails
+  input:
+    Resources:
+      Lt:
+        Type: AWS::EC2::LaunchTemplate
+        Properties:
+          LaunchTemplateData:
+            BlockDeviceMappings: [{DeviceName: /dev/xvda, Ebs: {VolumeSize: 100}}]
+  expectations:
+    rules: {COST_BLOCK_DEVICE_VOLUMES: FAIL}
+
+- name: launch template with an 8 GiB volume passes
+  input:
+    Resources:
+      Lt:
+        Type: AWS::EC2::LaunchTemplate
+        Properties:
+          LaunchTemplateData:
+            BlockDeviceMappings: [{DeviceName: /dev/xvda, Ebs: {VolumeSize: 8}}]
+  expectations:
+    rules: {COST_BLOCK_DEVICE_VOLUMES: PASS}
+
+- name: instance without block device mappings skips the volume rule
+  input:
+    Resources:
+      Vm: {Type: AWS::EC2::Instance, Properties: {InstanceType: t3.micro}}
+  expectations:
+    rules: {COST_BLOCK_DEVICE_VOLUMES: SKIP}
+
+# --- COST_ASG_INSTANCE_OVERRIDES --------------------------------------------
+
+- name: auto scaling overrides with t3.micro and t4g.micro pass
+  input:
+    Resources:
+      Asg:
+        Type: AWS::AutoScaling::AutoScalingGroup
+        Properties:
+          MinSize: '1'
+          MaxSize: '2'
+          MixedInstancesPolicy:
+            LaunchTemplate:
+              LaunchTemplateSpecification: {LaunchTemplateId: lt-123, Version: '1'}
+              Overrides: [{InstanceType: t3.micro}, {InstanceType: t4g.micro}]
+  expectations:
+    rules: {COST_ASG_INSTANCE_OVERRIDES: PASS}
+
+- name: auto scaling override with c5.4xlarge fails
+  input:
+    Resources:
+      Asg:
+        Type: AWS::AutoScaling::AutoScalingGroup
+        Properties:
+          MinSize: '1'
+          MaxSize: '2'
+          MixedInstancesPolicy:
+            LaunchTemplate:
+              LaunchTemplateSpecification: {LaunchTemplateId: lt-123, Version: '1'}
+              Overrides: [{InstanceType: t3.micro}, {InstanceType: c5.4xlarge}]
+  expectations:
+    rules: {COST_ASG_INSTANCE_OVERRIDES: FAIL}
+
+- name: auto scaling override with attribute-based instance requirements fails
+  input:
+    Resources:
+      Asg:
+        Type: AWS::AutoScaling::AutoScalingGroup
+        Properties:
+          MinSize: '1'
+          MaxSize: '2'
+          MixedInstancesPolicy:
+            LaunchTemplate:
+              LaunchTemplateSpecification: {LaunchTemplateId: lt-123, Version: '1'}
+              Overrides: [{InstanceRequirements: {VCpuCount: {Min: 2}, MemoryMiB: {Min: 4096}}}]
+  expectations:
+    rules: {COST_ASG_INSTANCE_OVERRIDES: FAIL}
+
+- name: auto scaling group without overrides skips the override rule
+  input:
+    Resources:
+      Asg: {Type: AWS::AutoScaling::AutoScalingGroup, Properties: {MinSize: '1', MaxSize: '2'}}
+  expectations:
+    rules: {COST_ASG_INSTANCE_OVERRIDES: SKIP}
+
+# --- COST_DYNAMODB_INDEX_THROUGHPUT -----------------------------------------
+
+- name: global secondary index with 5 RCU and 5 WCU passes
+  input:
+    Resources:
+      Table:
+        Type: AWS::DynamoDB::Table
+        Properties:
+          GlobalSecondaryIndexes: [{IndexName: byDate, ProvisionedThroughput: {ReadCapacityUnits: 5, WriteCapacityUnits: 5}}]
+  expectations:
+    rules: {COST_DYNAMODB_INDEX_THROUGHPUT: PASS}
+
+- name: global secondary index with 1000 RCU fails
+  input:
+    Resources:
+      Table:
+        Type: AWS::DynamoDB::Table
+        Properties:
+          GlobalSecondaryIndexes: [{IndexName: byDate, ProvisionedThroughput: {ReadCapacityUnits: 1000, WriteCapacityUnits: 5}}]
+  expectations:
+    rules: {COST_DYNAMODB_INDEX_THROUGHPUT: FAIL}
+
+- name: global secondary index with 1000 WCU fails
+  input:
+    Resources:
+      Table:
+        Type: AWS::DynamoDB::Table
+        Properties:
+          GlobalSecondaryIndexes: [{IndexName: byDate, ProvisionedThroughput: {ReadCapacityUnits: 5, WriteCapacityUnits: 1000}}]
+  expectations:
+    rules: {COST_DYNAMODB_INDEX_THROUGHPUT: FAIL}
+
+- name: on-demand index without throughput skips the index rule
+  input:
+    Resources:
+      Table:
+        Type: AWS::DynamoDB::Table
+        Properties:
+          BillingMode: PAY_PER_REQUEST
+          GlobalSecondaryIndexes: [{IndexName: byDate}]
+  expectations:
+    rules: {COST_DYNAMODB_INDEX_THROUGHPUT: SKIP}
+
+# --- COST_LAMBDA_NO_PROVISIONED_CONCURRENCY ---------------------------------
+
+- name: lambda alias without provisioned concurrency passes
+  input:
+    Resources:
+      Live: {Type: AWS::Lambda::Alias, Properties: {FunctionName: fn, FunctionVersion: '1', Name: live}}
+  expectations:
+    rules: {COST_LAMBDA_NO_PROVISIONED_CONCURRENCY: PASS}
+
+- name: lambda alias with provisioned concurrency fails
+  input:
+    Resources:
+      Live:
+        Type: AWS::Lambda::Alias
+        Properties:
+          FunctionName: fn
+          FunctionVersion: '1'
+          Name: live
+          ProvisionedConcurrencyConfig: {ProvisionedConcurrentExecutions: 10}
+  expectations:
+    rules: {COST_LAMBDA_NO_PROVISIONED_CONCURRENCY: FAIL}
+
+- name: lambda version with provisioned concurrency fails
+  input:
+    Resources:
+      V1:
+        Type: AWS::Lambda::Version
+        Properties:
+          FunctionName: fn
+          ProvisionedConcurrencyConfig: {ProvisionedConcurrentExecutions: 1}
+  expectations:
+    rules: {COST_LAMBDA_NO_PROVISIONED_CONCURRENCY: FAIL}
+
+# --- COST_APIGATEWAY_CACHE_SIZE --------------------------------------------
+
+- name: api gateway stage without a cache passes
+  input:
+    Resources:
+      Prod: {Type: AWS::ApiGateway::Stage, Properties: {RestApiId: abc, DeploymentId: def, StageName: prod}}
+  expectations:
+    rules: {COST_APIGATEWAY_CACHE_SIZE: PASS}
+
+- name: api gateway stage with the 0.5 GB cache passes
+  input:
+    Resources:
+      Prod:
+        Type: AWS::ApiGateway::Stage
+        Properties: {RestApiId: abc, DeploymentId: def, StageName: prod, CacheClusterEnabled: true, CacheClusterSize: '0.5'}
+  expectations:
+    rules: {COST_APIGATEWAY_CACHE_SIZE: PASS}
+
+- name: api gateway stage with a 237 GB cache fails
+  input:
+    Resources:
+      Prod:
+        Type: AWS::ApiGateway::Stage
+        Properties: {RestApiId: abc, DeploymentId: def, StageName: prod, CacheClusterEnabled: true, CacheClusterSize: '237'}
+  expectations:
+    rules: {COST_APIGATEWAY_CACHE_SIZE: FAIL}
+
+- name: api gateway stage enabling a cache without a size fails
+  input:
+    Resources:
+      Prod:
+        Type: AWS::ApiGateway::Stage
+        Properties: {RestApiId: abc, DeploymentId: def, StageName: prod, CacheClusterEnabled: true}
+  expectations:
+    rules: {COST_APIGATEWAY_CACHE_SIZE: FAIL}
+
+- name: api gateway deployment whose stage enables a 6.1 GB cache fails
+  input:
+    Resources:
+      Deploy:
+        Type: AWS::ApiGateway::Deployment
+        Properties: {RestApiId: abc, StageName: prod, StageDescription: {CacheClusterEnabled: true, CacheClusterSize: '6.1'}}
+  expectations:
+    rules: {COST_APIGATEWAY_CACHE_SIZE: FAIL}
+
+- name: api gateway deployment whose stage enables the 0.5 GB cache passes
+  input:
+    Resources:
+      Deploy:
+        Type: AWS::ApiGateway::Deployment
+        Properties: {RestApiId: abc, StageName: prod, StageDescription: {CacheClusterEnabled: true, CacheClusterSize: '0.5'}}
+  expectations:
+    rules: {COST_APIGATEWAY_CACHE_SIZE: PASS}
+
+- name: api gateway deployment without a stage description skips the cache rule
+  input:
+    Resources:
+      Deploy: {Type: AWS::ApiGateway::Deployment, Properties: {RestApiId: abc}}
+  expectations:
+    rules: {COST_APIGATEWAY_CACHE_SIZE: SKIP}
+
+# --- COST_ECS_SERVICE_COUNT -------------------------------------------------
+
+- name: ecs service with two tasks passes
+  input:
+    Resources:
+      Svc: {Type: AWS::ECS::Service, Properties: {DesiredCount: 2}}
+  expectations:
+    rules: {COST_ECS_SERVICE_COUNT: PASS}
+
+- name: ecs service without DesiredCount passes
+  input:
+    Resources:
+      Svc: {Type: AWS::ECS::Service, Properties: {Cluster: lab}}
+  expectations:
+    rules: {COST_ECS_SERVICE_COUNT: PASS}
+
+- name: ecs service with fifty tasks fails
+  input:
+    Resources:
+      Svc: {Type: AWS::ECS::Service, Properties: {DesiredCount: 50}}
+  expectations:
+    rules: {COST_ECS_SERVICE_COUNT: FAIL}
+
+- name: ecs service with DesiredCount from a parameter fails
+  input:
+    Resources:
+      Svc: {Type: AWS::ECS::Service, Properties: {DesiredCount: {Ref: Count}}}
+  expectations:
+    rules: {COST_ECS_SERVICE_COUNT: FAIL}
+
+# --- COST_ECS_TASK_SIZE -----------------------------------------------------
+
+- name: fargate task with quarter vcpu and 512 MiB passes
+  input:
+    Resources:
+      Task: {Type: AWS::ECS::TaskDefinition, Properties: {Cpu: '256', Memory: '512'}}
+  expectations:
+    rules: {COST_ECS_TASK_SIZE: PASS}
+
+- name: task definition with 4 vcpu fails
+  input:
+    Resources:
+      Task: {Type: AWS::ECS::TaskDefinition, Properties: {Cpu: '4096', Memory: '2048'}}
+  expectations:
+    rules: {COST_ECS_TASK_SIZE: FAIL}
+
+- name: task definition with 16 GiB of memory fails
+  input:
+    Resources:
+      Task: {Type: AWS::ECS::TaskDefinition, Properties: {Cpu: '1024', Memory: '16384'}}
+  expectations:
+    rules: {COST_ECS_TASK_SIZE: FAIL}
+
+# --- COST_EFS_NO_PROVISIONED_THROUGHPUT -------------------------------------
+
+- name: efs file system with all defaults passes
+  input:
+    Resources:
+      Files: {Type: AWS::EFS::FileSystem}
+  expectations:
+    rules: {COST_EFS_NO_PROVISIONED_THROUGHPUT: PASS}
+
+- name: efs file system with elastic throughput passes
+  input:
+    Resources:
+      Files: {Type: AWS::EFS::FileSystem, Properties: {ThroughputMode: elastic}}
+  expectations:
+    rules: {COST_EFS_NO_PROVISIONED_THROUGHPUT: PASS}
+
+- name: efs file system with provisioned throughput fails
+  input:
+    Resources:
+      Files: {Type: AWS::EFS::FileSystem, Properties: {ThroughputMode: provisioned, ProvisionedThroughputInMibps: 1024}}
+  expectations:
+    rules: {COST_EFS_NO_PROVISIONED_THROUGHPUT: FAIL}
+
+# --- COST_NO_RETAINED_RESOURCES ---------------------------------------------
+
+- name: resource with DeletionPolicy Delete passes
+  input:
+    Resources:
+      Bucket: {Type: AWS::S3::Bucket, DeletionPolicy: Delete}
+  expectations:
+    rules: {COST_NO_RETAINED_RESOURCES: PASS}
+
+- name: resource with DeletionPolicy Retain fails
+  input:
+    Resources:
+      Bucket: {Type: AWS::S3::Bucket, DeletionPolicy: Retain}
+  expectations:
+    rules: {COST_NO_RETAINED_RESOURCES: FAIL}
+
+- name: resource with DeletionPolicy RetainExceptOnCreate fails
+  input:
+    Resources:
+      Bucket: {Type: AWS::S3::Bucket, DeletionPolicy: RetainExceptOnCreate}
+  expectations:
+    rules: {COST_NO_RETAINED_RESOURCES: FAIL}
+
+- name: resource with DeletionPolicy Snapshot fails
+  input:
+    Resources:
+      Disk: {Type: AWS::EC2::Volume, DeletionPolicy: Snapshot}
+  expectations:
+    rules: {COST_NO_RETAINED_RESOURCES: FAIL}
+
+- name: resources without DeletionPolicy skip the retention rule
+  input:
+    Resources:
+      Bucket: {Type: AWS::S3::Bucket}
+  expectations:
+    rules: {COST_NO_RETAINED_RESOURCES: SKIP}
+
+# --- COST_NO_RETAINED_ON_REPLACE --------------------------------------------
+
+- name: resource with UpdateReplacePolicy Delete passes
+  input:
+    Resources:
+      Bucket: {Type: AWS::S3::Bucket, UpdateReplacePolicy: Delete}
+  expectations:
+    rules: {COST_NO_RETAINED_ON_REPLACE: PASS}
+
+- name: resource with UpdateReplacePolicy Retain fails
+  input:
+    Resources:
+      Bucket: {Type: AWS::S3::Bucket, UpdateReplacePolicy: Retain}
+  expectations:
+    rules: {COST_NO_RETAINED_ON_REPLACE: FAIL}
+
+# --- COST_ECR_EMPTY_ON_DELETE -----------------------------------------------
+
+- name: ecr repository with EmptyOnDelete true passes
+  input:
+    Resources:
+      Repo: {Type: AWS::ECR::Repository, Properties: {EmptyOnDelete: true}}
+  expectations:
+    rules: {COST_ECR_EMPTY_ON_DELETE: PASS}
+
+- name: ecr repository without EmptyOnDelete fails
+  input:
+    Resources:
+      Repo: {Type: AWS::ECR::Repository}
+  expectations:
+    rules: {COST_ECR_EMPTY_ON_DELETE: FAIL}
+
+- name: ecr repository with EmptyOnDelete false fails
+  input:
+    Resources:
+      Repo: {Type: AWS::ECR::Repository, Properties: {EmptyOnDelete: false}}
+  expectations:
+    rules: {COST_ECR_EMPTY_ON_DELETE: FAIL}

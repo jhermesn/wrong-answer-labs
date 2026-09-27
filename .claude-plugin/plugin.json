@@ -1,14 +1,14 @@
 {
-  "name": "aws-exam-questions-to-labs",
-  "displayName": "AWS exam questions to labs",
+  "name": "wrong-answer-labs",
+  "displayName": "Wrong Answer Labs",
   "description": "Turn AWS Certification questions you got wrong into hands-on CloudFormation labs with an automated grader, in the style of AWS Microcredentials.",
   "version": "0.1.0",
   "author": {
     "name": "Jorge Hermes",
     "url": "https://github.com/jhermesn"
   },
-  "homepage": "https://github.com/jhermesn/aws-exam-questions-to-labs",
-  "repository": "https://github.com/jhermesn/aws-exam-questions-to-labs",
+  "homepage": "https://github.com/jhermesn/wrong-answer-labs",
+  "repository": "https://github.com/jhermesn/wrong-answer-labs",
   "license": "MIT",
   "keywords": ["aws", "aws-certification", "cloudformation", "labs", "study", "cfn-guard"]
 }

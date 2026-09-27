@@ -1,0 +1,552 @@
+# Unit tests for rules/lab-security.guard, run with `cfn-guard test`.
+# Each FAIL case breaks exactly one condition so a broken condition cannot hide
+# behind another one. SKIP means the rule found nothing to evaluate.
+
+# --- SEC_S3_BLOCK_PUBLIC_ACCESS ---------------------------------------------
+
+- name: s3 bucket with all four public access blocks passes
+  input:
+    Resources:
+      Bucket:
+        Type: AWS::S3::Bucket
+        Properties:
+          PublicAccessBlockConfiguration: {BlockPublicAcls: true, BlockPublicPolicy: true, IgnorePublicAcls: true, RestrictPublicBuckets: true}
+  expectations:
+    rules: {SEC_S3_BLOCK_PUBLIC_ACCESS: PASS}
+
+- name: s3 bucket without public access block fails
+  input:
+    Resources:
+      Bucket: {Type: AWS::S3::Bucket}
+  expectations:
+    rules: {SEC_S3_BLOCK_PUBLIC_ACCESS: FAIL}
+
+- name: s3 bucket with one public access flag false fails
+  input:
+    Resources:
+      Bucket:
+        Type: AWS::S3::Bucket
+        Properties:
+          PublicAccessBlockConfiguration: {BlockPublicAcls: true, BlockPublicPolicy: true, IgnorePublicAcls: true, RestrictPublicBuckets: false}
+  expectations:
+    rules: {SEC_S3_BLOCK_PUBLIC_ACCESS: FAIL}
+
+- name: s3 bucket suppressing this rule is skipped
+  input:
+    Resources:
+      Bucket:
+        Type: AWS::S3::Bucket
+        Metadata: {guard: {SuppressedRules: [SEC_S3_BLOCK_PUBLIC_ACCESS]}}
+  expectations:
+    rules: {SEC_S3_BLOCK_PUBLIC_ACCESS: SKIP}
+
+- name: s3 bucket suppressing a different rule is still checked
+  input:
+    Resources:
+      Bucket:
+        Type: AWS::S3::Bucket
+        Metadata: {guard: {SuppressedRules: [SEC_EC2_IMDSV2]}}
+  expectations:
+    rules: {SEC_S3_BLOCK_PUBLIC_ACCESS: FAIL}
+
+- name: template without s3 buckets skips the s3 rule
+  input:
+    Resources:
+      Topic: {Type: AWS::SNS::Topic}
+  expectations:
+    rules: {SEC_S3_BLOCK_PUBLIC_ACCESS: SKIP}
+
+# --- SEC_NO_PUBLIC_ADMIN_PORTS ----------------------------------------------
+
+- name: security group with https open to the internet passes
+  input:
+    Resources:
+      Sg:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+          GroupDescription: web
+          SecurityGroupIngress: [{IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0}]
+  expectations:
+    rules: {SEC_NO_PUBLIC_ADMIN_PORTS: PASS}
+
+- name: security group with ssh open to the internet fails
+  input:
+    Resources:
+      Sg:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+          GroupDescription: ssh
+          SecurityGroupIngress: [{IpProtocol: tcp, FromPort: 22, ToPort: 22, CidrIp: 0.0.0.0/0}]
+  expectations:
+    rules: {SEC_NO_PUBLIC_ADMIN_PORTS: FAIL}
+
+- name: security group with rdp open to the internet fails
+  input:
+    Resources:
+      Sg:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+          GroupDescription: rdp
+          SecurityGroupIngress: [{IpProtocol: tcp, FromPort: 3389, ToPort: 3389, CidrIp: 0.0.0.0/0}]
+  expectations:
+    rules: {SEC_NO_PUBLIC_ADMIN_PORTS: FAIL}
+
+- name: security group with a public port range covering ssh fails
+  input:
+    Resources:
+      Sg:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+          GroupDescription: wide
+          SecurityGroupIngress: [{IpProtocol: tcp, FromPort: 0, ToPort: 65535, CidrIp: 0.0.0.0/0}]
+  expectations:
+    rules: {SEC_NO_PUBLIC_ADMIN_PORTS: FAIL}
+
+- name: security group with all traffic open as string -1 fails
+  input:
+    Resources:
+      Sg:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+          GroupDescription: all
+          SecurityGroupIngress: [{IpProtocol: '-1', CidrIp: 0.0.0.0/0}]
+  expectations:
+    rules: {SEC_NO_PUBLIC_ADMIN_PORTS: FAIL}
+
+- name: security group with all traffic open as number -1 fails
+  input:
+    Resources:
+      Sg:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+          GroupDescription: all
+          SecurityGroupIngress: [{IpProtocol: -1, CidrIp: 0.0.0.0/0}]
+  expectations:
+    rules: {SEC_NO_PUBLIC_ADMIN_PORTS: FAIL}
+
+- name: security group with ssh open to all ipv6 fails
+  input:
+    Resources:
+      Sg:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+          GroupDescription: ssh6
+          SecurityGroupIngress: [{IpProtocol: tcp, FromPort: 22, ToPort: 22, CidrIpv6: '::/0'}]
+  expectations:
+    rules: {SEC_NO_PUBLIC_ADMIN_PORTS: FAIL}
+
+- name: security group with ssh only from a private range is skipped
+  input:
+    Resources:
+      Sg:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+          GroupDescription: internal ssh
+          SecurityGroupIngress: [{IpProtocol: tcp, FromPort: 22, ToPort: 22, CidrIp: 10.0.0.0/8}]
+  expectations:
+    rules: {SEC_NO_PUBLIC_ADMIN_PORTS: SKIP}
+
+- name: security group suppressing this rule is skipped
+  input:
+    Resources:
+      Sg:
+        Type: AWS::EC2::SecurityGroup
+        Metadata: {guard: {SuppressedRules: [SEC_NO_PUBLIC_ADMIN_PORTS]}}
+        Properties:
+          GroupDescription: ssh on purpose
+          SecurityGroupIngress: [{IpProtocol: tcp, FromPort: 22, ToPort: 22, CidrIp: 0.0.0.0/0}]
+  expectations:
+    rules: {SEC_NO_PUBLIC_ADMIN_PORTS: SKIP}
+
+- name: security group without ingress rules is skipped
+  input:
+    Resources:
+      Sg:
+        Type: AWS::EC2::SecurityGroup
+        Properties: {GroupDescription: empty}
+  expectations:
+    rules: {SEC_NO_PUBLIC_ADMIN_PORTS: SKIP}
+
+# --- SEC_NO_PUBLIC_ADMIN_PORTS_STANDALONE -----------------------------------
+
+- name: standalone ingress with https open to the internet passes
+  input:
+    Resources:
+      Ingress:
+        Type: AWS::EC2::SecurityGroupIngress
+        Properties: {GroupId: sg-12345678, IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0}
+  expectations:
+    rules: {SEC_NO_PUBLIC_ADMIN_PORTS_STANDALONE: PASS}
+
+- name: standalone ingress with ssh open to the internet fails
+  input:
+    Resources:
+      Ingress:
+        Type: AWS::EC2::SecurityGroupIngress
+        Properties: {GroupId: sg-12345678, IpProtocol: tcp, FromPort: 22, ToPort: 22, CidrIp: 0.0.0.0/0}
+  expectations:
+    rules: {SEC_NO_PUBLIC_ADMIN_PORTS_STANDALONE: FAIL}
+
+- name: standalone ingress with a public range covering rdp fails
+  input:
+    Resources:
+      Ingress:
+        Type: AWS::EC2::SecurityGroupIngress
+        Properties: {GroupId: sg-12345678, IpProtocol: tcp, FromPort: 3000, ToPort: 4000, CidrIp: 0.0.0.0/0}
+  expectations:
+    rules: {SEC_NO_PUBLIC_ADMIN_PORTS_STANDALONE: FAIL}
+
+- name: standalone ingress with all traffic from ipv6 internet fails
+  input:
+    Resources:
+      Ingress:
+        Type: AWS::EC2::SecurityGroupIngress
+        Properties: {GroupId: sg-12345678, IpProtocol: '-1', CidrIpv6: '::/0'}
+  expectations:
+    rules: {SEC_NO_PUBLIC_ADMIN_PORTS_STANDALONE: FAIL}
+
+- name: standalone ingress with ssh from a private range is skipped
+  input:
+    Resources:
+      Ingress:
+        Type: AWS::EC2::SecurityGroupIngress
+        Properties: {GroupId: sg-12345678, IpProtocol: tcp, FromPort: 22, ToPort: 22, CidrIp: 10.0.0.0/8}
+  expectations:
+    rules: {SEC_NO_PUBLIC_ADMIN_PORTS_STANDALONE: SKIP}
+
+# --- SEC_EC2_IMDSV2 ---------------------------------------------------------
+
+- name: ec2 instance requiring imdsv2 passes
+  input:
+    Resources:
+      Vm:
+        Type: AWS::EC2::Instance
+        Properties: {MetadataOptions: {HttpTokens: required}}
+  expectations:
+    rules: {SEC_EC2_IMDSV2: PASS}
+
+- name: ec2 instance with optional imds tokens fails
+  input:
+    Resources:
+      Vm:
+        Type: AWS::EC2::Instance
+        Properties: {MetadataOptions: {HttpTokens: optional}}
+  expectations:
+    rules: {SEC_EC2_IMDSV2: FAIL}
+
+- name: ec2 instance without metadata options fails
+  input:
+    Resources:
+      Vm: {Type: AWS::EC2::Instance, Properties: {InstanceType: t3.micro}}
+  expectations:
+    rules: {SEC_EC2_IMDSV2: FAIL}
+
+- name: ec2 instance suppressing imdsv2 is skipped
+  input:
+    Resources:
+      Vm:
+        Type: AWS::EC2::Instance
+        Metadata: {guard: {SuppressedRules: [SEC_EC2_IMDSV2]}}
+        Properties: {InstanceType: t3.micro}
+  expectations:
+    rules: {SEC_EC2_IMDSV2: SKIP}
+
+# --- SEC_IAM_NO_ADMIN_INLINE ------------------------------------------------
+
+- name: inline policy with scoped actions passes
+  input:
+    Resources:
+      Role:
+        Type: AWS::IAM::Role
+        Properties:
+          Policies:
+            - PolicyName: read
+              PolicyDocument:
+                Statement: [{Effect: Allow, Action: ['s3:GetObject', 's3:*'], Resource: '*'}]
+  expectations:
+    rules: {SEC_IAM_NO_ADMIN_INLINE: PASS}
+
+- name: inline policy allowing action star as a string fails
+  input:
+    Resources:
+      Role:
+        Type: AWS::IAM::Role
+        Properties:
+          Policies:
+            - PolicyName: admin
+              PolicyDocument:
+                Statement: [{Effect: Allow, Action: '*', Resource: '*'}]
+  expectations:
+    rules: {SEC_IAM_NO_ADMIN_INLINE: FAIL}
+
+- name: inline policy allowing action star inside a list fails
+  input:
+    Resources:
+      User:
+        Type: AWS::IAM::User
+        Properties:
+          Policies:
+            - PolicyName: admin
+              PolicyDocument:
+                Statement: [{Effect: Allow, Action: ['s3:GetObject', '*'], Resource: '*'}]
+  expectations:
+    rules: {SEC_IAM_NO_ADMIN_INLINE: FAIL}
+
+- name: inline policy whose single statement is a map allowing star fails
+  input:
+    Resources:
+      Group:
+        Type: AWS::IAM::Group
+        Properties:
+          Policies:
+            - PolicyName: admin
+              PolicyDocument:
+                Statement: {Effect: Allow, Action: '*', Resource: '*'}
+  expectations:
+    rules: {SEC_IAM_NO_ADMIN_INLINE: FAIL}
+
+- name: inline policy that only denies action star is skipped
+  input:
+    Resources:
+      Role:
+        Type: AWS::IAM::Role
+        Properties:
+          Policies:
+            - PolicyName: guardrail
+              PolicyDocument:
+                Statement: [{Effect: Deny, Action: '*', Resource: '*'}]
+  expectations:
+    rules: {SEC_IAM_NO_ADMIN_INLINE: SKIP}
+
+- name: role without inline policies skips the inline rule
+  input:
+    Resources:
+      Role: {Type: AWS::IAM::Role, Properties: {AssumeRolePolicyDocument: {}}}
+  expectations:
+    rules: {SEC_IAM_NO_ADMIN_INLINE: SKIP}
+
+# --- SEC_IAM_NO_ADMIN_POLICY ------------------------------------------------
+
+- name: managed policy with scoped actions passes
+  input:
+    Resources:
+      Policy:
+        Type: AWS::IAM::ManagedPolicy
+        Properties:
+          PolicyDocument:
+            Statement: [{Effect: Allow, Action: 'dynamodb:GetItem', Resource: '*'}]
+  expectations:
+    rules: {SEC_IAM_NO_ADMIN_POLICY: PASS}
+
+- name: managed policy allowing action star fails
+  input:
+    Resources:
+      Policy:
+        Type: AWS::IAM::ManagedPolicy
+        Properties:
+          PolicyDocument:
+            Statement: [{Effect: Allow, Action: '*', Resource: '*'}]
+  expectations:
+    rules: {SEC_IAM_NO_ADMIN_POLICY: FAIL}
+
+- name: iam policy allowing action star inside a list fails
+  input:
+    Resources:
+      Policy:
+        Type: AWS::IAM::Policy
+        Properties:
+          PolicyName: admin
+          PolicyDocument:
+            Statement: [{Effect: Allow, Action: ['*'], Resource: '*'}]
+  expectations:
+    rules: {SEC_IAM_NO_ADMIN_POLICY: FAIL}
+
+- name: managed policy whose single statement is a map allowing star fails
+  input:
+    Resources:
+      Policy:
+        Type: AWS::IAM::ManagedPolicy
+        Properties:
+          PolicyDocument:
+            Statement: {Effect: Allow, Action: '*', Resource: '*'}
+  expectations:
+    rules: {SEC_IAM_NO_ADMIN_POLICY: FAIL}
+
+- name: managed policy whose single statement is a scoped map passes
+  input:
+    Resources:
+      Policy:
+        Type: AWS::IAM::ManagedPolicy
+        Properties:
+          PolicyDocument:
+            Statement: {Effect: Allow, Action: 'sqs:SendMessage', Resource: '*'}
+  expectations:
+    rules: {SEC_IAM_NO_ADMIN_POLICY: PASS}
+
+# --- SEC_IAM_NO_ADMINISTRATOR_ACCESS ----------------------------------------
+
+- name: role with a narrow aws managed policy passes
+  input:
+    Resources:
+      Role:
+        Type: AWS::IAM::Role
+        Properties:
+          ManagedPolicyArns: ['arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore']
+  expectations:
+    rules: {SEC_IAM_NO_ADMINISTRATOR_ACCESS: PASS}
+
+- name: role with AdministratorAccess fails
+  input:
+    Resources:
+      Role:
+        Type: AWS::IAM::Role
+        Properties:
+          ManagedPolicyArns: ['arn:aws:iam::aws:policy/AdministratorAccess']
+  expectations:
+    rules: {SEC_IAM_NO_ADMINISTRATOR_ACCESS: FAIL}
+
+- name: user with PowerUserAccess fails
+  input:
+    Resources:
+      User:
+        Type: AWS::IAM::User
+        Properties:
+          ManagedPolicyArns: ['arn:aws:iam::aws:policy/PowerUserAccess']
+  expectations:
+    rules: {SEC_IAM_NO_ADMINISTRATOR_ACCESS: FAIL}
+
+- name: role with AdministratorAccess built with Fn::Sub and the partition fails
+  input:
+    Resources:
+      Role:
+        Type: AWS::IAM::Role
+        Properties:
+          ManagedPolicyArns:
+            - {'Fn::Sub': 'arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess'}
+  expectations:
+    rules: {SEC_IAM_NO_ADMINISTRATOR_ACCESS: FAIL}
+
+- name: role with a narrow policy built with Fn::Sub passes
+  input:
+    Resources:
+      Role:
+        Type: AWS::IAM::Role
+        Properties:
+          ManagedPolicyArns:
+            - {'Fn::Sub': 'arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore'}
+  expectations:
+    rules: {SEC_IAM_NO_ADMINISTRATOR_ACCESS: PASS}
+
+# --- SEC_NO_IAM_ACCESS_KEYS -------------------------------------------------
+
+- name: template with an iam access key fails
+  input:
+    Resources:
+      Key: {Type: AWS::IAM::AccessKey, Properties: {UserName: learner}}
+  expectations:
+    rules: {SEC_NO_IAM_ACCESS_KEYS: FAIL}
+
+- name: template without access keys skips the access key rule
+  input:
+    Resources:
+      User: {Type: AWS::IAM::User}
+  expectations:
+    rules: {SEC_NO_IAM_ACCESS_KEYS: SKIP}
+
+# --- SEC_RDS_NO_PLAINTEXT_PASSWORD ------------------------------------------
+
+- name: rds instance with a managed master password passes
+  input:
+    Resources:
+      Db: {Type: AWS::RDS::DBInstance, Properties: {ManageMasterUserPassword: true}}
+  expectations:
+    rules: {SEC_RDS_NO_PLAINTEXT_PASSWORD: PASS}
+
+- name: rds instance with a plaintext master password fails
+  input:
+    Resources:
+      Db: {Type: AWS::RDS::DBInstance, Properties: {MasterUserPassword: hunter2hunter2}}
+  expectations:
+    rules: {SEC_RDS_NO_PLAINTEXT_PASSWORD: FAIL}
+
+- name: aurora cluster with a master password from a parameter fails
+  input:
+    Resources:
+      Cluster: {Type: AWS::RDS::DBCluster, Properties: {MasterUserPassword: {Ref: DbPassword}}}
+  expectations:
+    rules: {SEC_RDS_NO_PLAINTEXT_PASSWORD: FAIL}
+
+# --- SEC_RDS_NOT_PUBLIC -----------------------------------------------------
+
+- name: rds instance without PubliclyAccessible passes
+  input:
+    Resources:
+      Db: {Type: AWS::RDS::DBInstance, Properties: {Engine: mysql}}
+  expectations:
+    rules: {SEC_RDS_NOT_PUBLIC: PASS}
+
+- name: rds instance with PubliclyAccessible false passes
+  input:
+    Resources:
+      Db: {Type: AWS::RDS::DBInstance, Properties: {PubliclyAccessible: false}}
+  expectations:
+    rules: {SEC_RDS_NOT_PUBLIC: PASS}
+
+- name: rds instance with PubliclyAccessible true fails
+  input:
+    Resources:
+      Db: {Type: AWS::RDS::DBInstance, Properties: {PubliclyAccessible: true}}
+  expectations:
+    rules: {SEC_RDS_NOT_PUBLIC: FAIL}
+
+- name: public rds instance suppressing this rule is skipped
+  input:
+    Resources:
+      Db:
+        Type: AWS::RDS::DBInstance
+        Metadata: {guard: {SuppressedRules: [SEC_RDS_NOT_PUBLIC]}}
+        Properties: {PubliclyAccessible: true}
+  expectations:
+    rules: {SEC_RDS_NOT_PUBLIC: SKIP}
+
+# --- SEC_SECRET_PARAMETERS_NOECHO -------------------------------------------
+
+- name: password parameter with NoEcho passes
+  input:
+    Parameters:
+      DbPassword: {Type: String, NoEcho: true}
+    Resources: {}
+  expectations:
+    rules: {SEC_SECRET_PARAMETERS_NOECHO: PASS}
+
+- name: password parameter with NoEcho as the string true passes
+  input:
+    Parameters:
+      DbPassword: {Type: String, NoEcho: 'true'}
+    Resources: {}
+  expectations:
+    rules: {SEC_SECRET_PARAMETERS_NOECHO: PASS}
+
+- name: password parameter without NoEcho fails
+  input:
+    Parameters:
+      DbPassword: {Type: String}
+    Resources: {}
+  expectations:
+    rules: {SEC_SECRET_PARAMETERS_NOECHO: FAIL}
+
+- name: lowercase token parameter without NoEcho fails
+  input:
+    Parameters:
+      githubToken: {Type: String}
+    Resources: {}
+  expectations:
+    rules: {SEC_SECRET_PARAMETERS_NOECHO: FAIL}
+
+- name: non secret parameters skip the NoEcho rule
+  input:
+    Parameters:
+      Environment: {Type: String}
+    Resources: {}
+  expectations:
+    rules: {SEC_SECRET_PARAMETERS_NOECHO: SKIP}

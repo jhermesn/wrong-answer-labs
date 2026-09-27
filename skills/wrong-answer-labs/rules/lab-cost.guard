@@ -1,0 +1,542 @@
+#
+# Cost guardrails for study labs. Not suppressible: if a lab needs any of this,
+# it becomes a docs-only lab (see references/cost-policy.md).
+#
+# Default deny: a resource type is allowed only after someone reviewed how it
+# bills. Types with a size or capacity knob also need a size rule below.
+# Custom resources are never allowed: their Lambda could create anything
+# outside this gate.
+#
+# Sizing properties must be literal values (no Ref/parameters) so the learner
+# cannot deploy a bigger size than the one validated here.
+#
+
+let all_resources = Resources.*
+
+rule COST_ALLOWED_RESOURCE_TYPES when %all_resources !empty {
+    %all_resources.Type in [
+        'AWS::ApiGateway::ApiKey',
+        'AWS::ApiGateway::Authorizer',
+        'AWS::ApiGateway::Deployment',
+        'AWS::ApiGateway::Method',
+        'AWS::ApiGateway::Resource',
+        'AWS::ApiGateway::RestApi',
+        'AWS::ApiGateway::Stage',
+        'AWS::ApiGateway::UsagePlan',
+        'AWS::ApiGateway::UsagePlanKey',
+        'AWS::ApiGatewayV2::Api',
+        'AWS::ApiGatewayV2::Authorizer',
+        'AWS::ApiGatewayV2::Integration',
+        'AWS::ApiGatewayV2::Route',
+        'AWS::ApiGatewayV2::Stage',
+        'AWS::Athena::NamedQuery',
+        'AWS::Athena::WorkGroup',
+        'AWS::AutoScaling::AutoScalingGroup',
+        'AWS::AutoScaling::LifecycleHook',
+        'AWS::AutoScaling::ScalingPolicy',
+        'AWS::AutoScaling::ScheduledAction',
+        'AWS::Backup::BackupPlan',
+        'AWS::Backup::BackupSelection',
+        'AWS::Backup::BackupVault',
+        'AWS::Budgets::Budget',
+        'AWS::CertificateManager::Certificate',
+        'AWS::CloudFront::CachePolicy',
+        'AWS::CloudFront::Distribution',
+        'AWS::CloudFront::Function',
+        'AWS::CloudFront::OriginAccessControl',
+        'AWS::CloudTrail::Trail',
+        'AWS::CloudWatch::Alarm',
+        'AWS::CloudWatch::CompositeAlarm',
+        'AWS::CloudWatch::Dashboard',
+        'AWS::CodeBuild::Project',
+        'AWS::CodeDeploy::Application',
+        'AWS::CodeDeploy::DeploymentGroup',
+        'AWS::CodePipeline::Pipeline',
+        'AWS::Cognito::IdentityPool',
+        'AWS::Cognito::UserPool',
+        'AWS::Cognito::UserPoolClient',
+        'AWS::Cognito::UserPoolDomain',
+        'AWS::DocDB::DBCluster',
+        'AWS::DocDB::DBClusterParameterGroup',
+        'AWS::DocDB::DBInstance',
+        'AWS::DocDB::DBSubnetGroup',
+        'AWS::DynamoDB::Table',
+        'AWS::EC2::ClientVpnAuthorizationRule',
+        'AWS::EC2::ClientVpnEndpoint',
+        'AWS::EC2::ClientVpnTargetNetworkAssociation',
+        'AWS::EC2::CustomerGateway',
+        'AWS::EC2::DHCPOptions',
+        'AWS::EC2::EgressOnlyInternetGateway',
+        'AWS::EC2::EIP',
+        'AWS::EC2::EIPAssociation',
+        'AWS::EC2::FlowLog',
+        'AWS::EC2::Instance',
+        'AWS::EC2::InternetGateway',
+        'AWS::EC2::LaunchTemplate',
+        'AWS::EC2::NatGateway',
+        'AWS::EC2::NetworkAcl',
+        'AWS::EC2::NetworkAclEntry',
+        'AWS::EC2::NetworkInterface',
+        'AWS::EC2::PrefixList',
+        'AWS::EC2::Route',
+        'AWS::EC2::RouteTable',
+        'AWS::EC2::SecurityGroup',
+        'AWS::EC2::SecurityGroupEgress',
+        'AWS::EC2::SecurityGroupIngress',
+        'AWS::EC2::Subnet',
+        'AWS::EC2::SubnetNetworkAclAssociation',
+        'AWS::EC2::SubnetRouteTableAssociation',
+        'AWS::EC2::TransitGateway',
+        'AWS::EC2::TransitGatewayAttachment',
+        'AWS::EC2::TransitGatewayRoute',
+        'AWS::EC2::TransitGatewayRouteTable',
+        'AWS::EC2::TransitGatewayRouteTableAssociation',
+        'AWS::EC2::TransitGatewayRouteTablePropagation',
+        'AWS::EC2::TransitGatewayVpcAttachment',
+        'AWS::EC2::Volume',
+        'AWS::EC2::VolumeAttachment',
+        'AWS::EC2::VPC',
+        'AWS::EC2::VPCCidrBlock',
+        'AWS::EC2::VPCDHCPOptionsAssociation',
+        'AWS::EC2::VPCEndpoint',
+        'AWS::EC2::VPCGatewayAttachment',
+        'AWS::EC2::VPCPeeringConnection',
+        'AWS::EC2::VPNConnection',
+        'AWS::EC2::VPNConnectionRoute',
+        'AWS::EC2::VPNGateway',
+        'AWS::EC2::VPNGatewayRoutePropagation',
+        'AWS::ECR::Repository',
+        'AWS::ECS::Cluster',
+        'AWS::ECS::Service',
+        'AWS::ECS::TaskDefinition',
+        'AWS::EFS::AccessPoint',
+        'AWS::EFS::FileSystem',
+        'AWS::EFS::MountTarget',
+        'AWS::EKS::Cluster',
+        'AWS::EKS::Nodegroup',
+        'AWS::ElastiCache::CacheCluster',
+        'AWS::ElastiCache::ParameterGroup',
+        'AWS::ElastiCache::ReplicationGroup',
+        'AWS::ElastiCache::SubnetGroup',
+        'AWS::ElasticLoadBalancing::LoadBalancer',
+        'AWS::ElasticLoadBalancingV2::Listener',
+        'AWS::ElasticLoadBalancingV2::ListenerRule',
+        'AWS::ElasticLoadBalancingV2::LoadBalancer',
+        'AWS::ElasticLoadBalancingV2::TargetGroup',
+        'AWS::Events::EventBus',
+        'AWS::Events::Rule',
+        'AWS::Glue::Crawler',
+        'AWS::Glue::Database',
+        'AWS::Glue::Table',
+        'AWS::GlobalAccelerator::Accelerator',
+        'AWS::GlobalAccelerator::EndpointGroup',
+        'AWS::GlobalAccelerator::Listener',
+        'AWS::IAM::Group',
+        'AWS::IAM::InstanceProfile',
+        'AWS::IAM::ManagedPolicy',
+        'AWS::IAM::Policy',
+        'AWS::IAM::Role',
+        'AWS::IAM::User',
+        'AWS::IAM::UserToGroupAddition',
+        'AWS::Kinesis::Stream',
+        'AWS::KinesisFirehose::DeliveryStream',
+        'AWS::KMS::Alias',
+        'AWS::KMS::Key',
+        'AWS::Lambda::Alias',
+        'AWS::Lambda::EventSourceMapping',
+        'AWS::Lambda::Function',
+        'AWS::Lambda::LayerVersion',
+        'AWS::Lambda::Permission',
+        'AWS::Lambda::Url',
+        'AWS::Lambda::Version',
+        'AWS::Logs::LogGroup',
+        'AWS::Logs::MetricFilter',
+        'AWS::Logs::SubscriptionFilter',
+        'AWS::Neptune::DBCluster',
+        'AWS::Neptune::DBInstance',
+        'AWS::Neptune::DBSubnetGroup',
+        'AWS::OpenSearchService::Domain',
+        'AWS::RDS::DBCluster',
+        'AWS::RDS::DBClusterParameterGroup',
+        'AWS::RDS::DBInstance',
+        'AWS::RDS::DBParameterGroup',
+        'AWS::RDS::DBSubnetGroup',
+        'AWS::RDS::OptionGroup',
+        'AWS::RedshiftServerless::Namespace',
+        'AWS::RedshiftServerless::Workgroup',
+        'AWS::Route53::HealthCheck',
+        'AWS::Route53::HostedZone',
+        'AWS::Route53::RecordSet',
+        'AWS::S3::AccessPoint',
+        'AWS::S3::Bucket',
+        'AWS::S3::BucketPolicy',
+        'AWS::SageMaker::Endpoint',
+        'AWS::SageMaker::EndpointConfig',
+        'AWS::SageMaker::Model',
+        'AWS::SageMaker::NotebookInstance',
+        'AWS::Scheduler::Schedule',
+        'AWS::SecretsManager::RotationSchedule',
+        'AWS::SecretsManager::Secret',
+        'AWS::SecretsManager::SecretTargetAttachment',
+        'AWS::SNS::Subscription',
+        'AWS::SNS::Topic',
+        'AWS::SNS::TopicPolicy',
+        'AWS::SQS::Queue',
+        'AWS::SQS::QueuePolicy',
+        'AWS::SSM::Association',
+        'AWS::SSM::Document',
+        'AWS::SSM::Parameter',
+        'AWS::StepFunctions::StateMachine',
+        'AWS::WAFv2::IPSet',
+        'AWS::WAFv2::RuleGroup',
+        'AWS::WAFv2::WebACL',
+        'AWS::WAFv2::WebACLAssociation'
+    ]
+    <<
+        Violation: resource type has not been reviewed for lab cost.
+        Fix: produce a docs-only lab for this topic, or add the type to this allowlist
+        together with a size rule and tests (see CONTRIBUTING.md).
+    >>
+}
+
+let ec2_instances = Resources.*[ Type == 'AWS::EC2::Instance' ]
+rule COST_EC2_INSTANCE_TYPE when %ec2_instances !empty {
+    %ec2_instances.Properties.InstanceType in ['t3.nano', 't3.micro', 't3.small', 't4g.nano', 't4g.micro', 't4g.small']
+    <<
+        Violation: EC2 InstanceType must be a literal t3/t4g nano|micro|small.
+    >>
+}
+
+let launch_templates = Resources.*[ Type == 'AWS::EC2::LaunchTemplate'
+    Properties.LaunchTemplateData.InstanceType exists ]
+rule COST_LAUNCH_TEMPLATE_INSTANCE_TYPE when %launch_templates !empty {
+    %launch_templates.Properties.LaunchTemplateData.InstanceType in ['t3.nano', 't3.micro', 't3.small', 't4g.nano', 't4g.micro', 't4g.small']
+    <<
+        Violation: LaunchTemplate InstanceType must be a literal t3/t4g nano|micro|small.
+    >>
+}
+
+let asgs = Resources.*[ Type == 'AWS::AutoScaling::AutoScalingGroup' ]
+rule COST_ASG_MAX_SIZE when %asgs !empty {
+    %asgs.Properties.MaxSize in ['1', '2', '3', 1, 2, 3]
+    <<
+        Violation: AutoScalingGroup MaxSize must be a literal between 1 and 3.
+    >>
+}
+
+let eks_nodegroups = Resources.*[ Type == 'AWS::EKS::Nodegroup' ]
+rule COST_EKS_NODEGROUP when %eks_nodegroups !empty {
+    %eks_nodegroups.Properties.InstanceTypes[*] in ['t3.small', 't3.medium', 't4g.small', 't4g.medium']
+    %eks_nodegroups.Properties.ScalingConfig.MaxSize in [1, 2]
+    <<
+        Violation: EKS nodegroup must use t3/t4g small|medium with ScalingConfig.MaxSize <= 2.
+    >>
+}
+
+let ebs_volumes = Resources.*[ Type == 'AWS::EC2::Volume' ]
+rule COST_EBS_VOLUME when %ebs_volumes !empty {
+    %ebs_volumes.Properties {
+        Size <= 30
+        VolumeType !exists or VolumeType !in ['io1', 'io2']
+        <<
+            Violation: EBS volume must be <= 30 GiB and not provisioned IOPS (io1/io2).
+        >>
+    }
+}
+
+let nat_gateways = Resources.*[ Type == 'AWS::EC2::NatGateway' ]
+rule COST_SINGLE_NAT_GATEWAY when %nat_gateways !empty {
+    let nat_count = count(%nat_gateways)
+    %nat_count <= 1
+    <<
+        Violation: at most one NAT Gateway per lab.
+    >>
+}
+
+let tgw_attachments = Resources.*[ Type == 'AWS::EC2::TransitGatewayAttachment' or Type == 'AWS::EC2::TransitGatewayVpcAttachment' ]
+rule COST_TGW_ATTACHMENTS when %tgw_attachments !empty {
+    let attachment_count = count(%tgw_attachments)
+    %attachment_count <= 3
+    <<
+        Violation: at most three Transit Gateway attachments per lab.
+    >>
+}
+
+let db_instances = Resources.*[ Type == 'AWS::RDS::DBInstance' ]
+rule COST_RDS_INSTANCE when %db_instances !empty {
+    %db_instances {
+        Properties.DBInstanceClass in ['db.t3.micro', 'db.t4g.micro', 'db.t3.small', 'db.t4g.small', 'db.t3.medium', 'db.t4g.medium', 'db.serverless']
+        Properties.StorageType !exists or Properties.StorageType !in ['io1', 'io2']
+        Properties.Iops !exists
+        DeletionPolicy == 'Delete'
+        Properties.DeletionProtection !exists or Properties.DeletionProtection == false
+        <<
+            Violation: RDS instance must be db.t3/t4g micro|small|medium (medium only for Aurora) or db.serverless,
+            no provisioned IOPS, DeletionPolicy Delete (default Snapshot leaves billed storage) and no DeletionProtection.
+        >>
+    }
+}
+
+let rds_with_storage = Resources.*[ Type == 'AWS::RDS::DBInstance'
+    Properties.AllocatedStorage exists ]
+rule COST_RDS_STORAGE when %rds_with_storage !empty {
+    %rds_with_storage.Properties.AllocatedStorage in ['20', 20]
+    <<
+        Violation: RDS AllocatedStorage must be 20 GiB.
+    >>
+}
+
+let db_clusters = Resources.*[ Type == 'AWS::RDS::DBCluster' ]
+rule COST_AURORA_CLUSTER when %db_clusters !empty {
+    %db_clusters {
+        DeletionPolicy == 'Delete'
+        Properties.DeletionProtection !exists or Properties.DeletionProtection == false
+        Properties.DBClusterInstanceClass !exists
+        <<
+            Violation: Aurora cluster needs DeletionPolicy Delete, no DeletionProtection, and no Multi-AZ DB cluster (DBClusterInstanceClass).
+        >>
+    }
+}
+
+let aurora_serverless = Resources.*[ Type == 'AWS::RDS::DBCluster'
+    Properties.ServerlessV2ScalingConfiguration exists ]
+rule COST_AURORA_SERVERLESS_CAPACITY when %aurora_serverless !empty {
+    %aurora_serverless.Properties.ServerlessV2ScalingConfiguration.MaxCapacity <= 2
+    <<
+        Violation: Aurora Serverless v2 MaxCapacity must be <= 2 ACU.
+    >>
+}
+
+let doc_graph_instances = Resources.*[ Type == 'AWS::DocDB::DBInstance' or Type == 'AWS::Neptune::DBInstance' ]
+rule COST_DOCDB_NEPTUNE_INSTANCE when %doc_graph_instances !empty {
+    %doc_graph_instances.Properties.DBInstanceClass in ['db.t3.medium', 'db.t4g.medium']
+    <<
+        Violation: DocumentDB/Neptune instance must be db.t3.medium or db.t4g.medium.
+    >>
+}
+
+let doc_graph_clusters = Resources.*[ Type == 'AWS::DocDB::DBCluster' or Type == 'AWS::Neptune::DBCluster' ]
+rule COST_DOCDB_NEPTUNE_CLUSTER when %doc_graph_clusters !empty {
+    %doc_graph_clusters.DeletionPolicy == 'Delete'
+    <<
+        Violation: DocumentDB/Neptune cluster needs DeletionPolicy Delete.
+    >>
+}
+
+let cache_clusters = Resources.*[ Type == 'AWS::ElastiCache::CacheCluster' ]
+rule COST_ELASTICACHE_NODE when %cache_clusters !empty {
+    %cache_clusters.Properties.CacheNodeType in ['cache.t3.micro', 'cache.t4g.micro']
+    %cache_clusters.Properties.NumCacheNodes in [1, 2, '1', '2']
+    <<
+        Violation: ElastiCache cluster must be cache.t3/t4g.micro with at most 2 nodes.
+    >>
+}
+
+let replication_groups = Resources.*[ Type == 'AWS::ElastiCache::ReplicationGroup' ]
+rule COST_ELASTICACHE_REPLICATION_GROUP when %replication_groups !empty {
+    %replication_groups.Properties {
+        CacheNodeType in ['cache.t3.micro', 'cache.t4g.micro']
+        NumCacheClusters !exists or NumCacheClusters <= 2
+        NumNodeGroups !exists or NumNodeGroups <= 1
+        ReplicasPerNodeGroup !exists or ReplicasPerNodeGroup <= 1
+        <<
+            Violation: ElastiCache replication group must use cache.t3/t4g.micro with at most
+            2 nodes in total (NumCacheClusters <= 2, NumNodeGroups <= 1, ReplicasPerNodeGroup <= 1).
+        >>
+    }
+}
+
+let opensearch_domains = Resources.*[ Type == 'AWS::OpenSearchService::Domain' ]
+rule COST_OPENSEARCH_DOMAIN when %opensearch_domains !empty {
+    %opensearch_domains.Properties {
+        ClusterConfig.InstanceType == 't3.small.search'
+        ClusterConfig.InstanceCount in [1, '1']
+        ClusterConfig.DedicatedMasterEnabled !exists or ClusterConfig.DedicatedMasterEnabled == false
+        EBSOptions.VolumeSize <= 10
+        <<
+            Violation: OpenSearch domain must be a single t3.small.search node, no dedicated master, EBS <= 10 GiB.
+        >>
+    }
+}
+
+let dynamodb_provisioned = Resources.*[ Type == 'AWS::DynamoDB::Table'
+    Properties.ProvisionedThroughput exists ]
+rule COST_DYNAMODB_PROVISIONED when %dynamodb_provisioned !empty {
+    %dynamodb_provisioned.Properties.ProvisionedThroughput.ReadCapacityUnits <= 5
+    %dynamodb_provisioned.Properties.ProvisionedThroughput.WriteCapacityUnits <= 5
+    <<
+        Violation: DynamoDB provisioned throughput must be <= 5 RCU/WCU (or use PAY_PER_REQUEST).
+    >>
+}
+
+let kinesis_streams = Resources.*[ Type == 'AWS::Kinesis::Stream'
+    Properties.ShardCount exists ]
+rule COST_KINESIS_SHARDS when %kinesis_streams !empty {
+    %kinesis_streams.Properties.ShardCount <= 2
+    <<
+        Violation: Kinesis stream must have <= 2 shards.
+    >>
+}
+
+let redshift_workgroups = Resources.*[ Type == 'AWS::RedshiftServerless::Workgroup' ]
+rule COST_REDSHIFT_SERVERLESS when %redshift_workgroups !empty {
+    %redshift_workgroups.Properties.BaseCapacity == 8
+    %redshift_workgroups.Properties.MaxCapacity == 8
+    <<
+        Violation: Redshift Serverless workgroup must pin BaseCapacity and MaxCapacity to 8 RPU.
+    >>
+}
+
+let sagemaker_notebooks = Resources.*[ Type == 'AWS::SageMaker::NotebookInstance' ]
+rule COST_SAGEMAKER_NOTEBOOK when %sagemaker_notebooks !empty {
+    %sagemaker_notebooks.Properties.InstanceType in ['ml.t3.medium']
+    <<
+        Violation: SageMaker notebook must be ml.t3.medium.
+    >>
+}
+
+let sagemaker_endpoint_configs = Resources.*[ Type == 'AWS::SageMaker::EndpointConfig' ]
+rule COST_SAGEMAKER_ENDPOINT when %sagemaker_endpoint_configs !empty {
+    %sagemaker_endpoint_configs.Properties.ProductionVariants[*] {
+        ServerlessConfig exists or InstanceType in ['ml.t2.medium', 'ml.m5.large']
+        <<
+            Violation: SageMaker endpoint variants must be serverless or ml.t2.medium/ml.m5.large.
+        >>
+    }
+}
+
+let instance_disks = Resources.*[ Type == 'AWS::EC2::Instance' ].Properties.BlockDeviceMappings[*].Ebs
+let launch_template_disks = Resources.*[ Type == 'AWS::EC2::LaunchTemplate' ].Properties.LaunchTemplateData.BlockDeviceMappings[*].Ebs
+rule COST_BLOCK_DEVICE_VOLUMES when %instance_disks !empty or %launch_template_disks !empty {
+    when %instance_disks !empty {
+        %instance_disks {
+            VolumeSize !exists or VolumeSize <= 30
+            VolumeType !exists or VolumeType !in ['io1', 'io2']
+            <<
+                Violation: instance EBS volumes must be <= 30 GiB and not provisioned IOPS (io1/io2).
+            >>
+        }
+    }
+    when %launch_template_disks !empty {
+        %launch_template_disks {
+            VolumeSize !exists or VolumeSize <= 30
+            VolumeType !exists or VolumeType !in ['io1', 'io2']
+            <<
+                Violation: launch template EBS volumes must be <= 30 GiB and not provisioned IOPS (io1/io2).
+            >>
+        }
+    }
+}
+
+let asg_overrides = Resources.*[ Type == 'AWS::AutoScaling::AutoScalingGroup' ].Properties.MixedInstancesPolicy.LaunchTemplate.Overrides[*]
+rule COST_ASG_INSTANCE_OVERRIDES when %asg_overrides !empty {
+    %asg_overrides {
+        InstanceRequirements !exists
+        InstanceType in ['t3.nano', 't3.micro', 't3.small', 't4g.nano', 't4g.micro', 't4g.small']
+        <<
+            Violation: AutoScalingGroup instance overrides must name a literal t3/t4g nano|micro|small
+            (attribute-based InstanceRequirements can pick any size).
+        >>
+    }
+}
+
+let dynamodb_index_throughput = Resources.*[ Type == 'AWS::DynamoDB::Table' ].Properties.GlobalSecondaryIndexes[*].ProvisionedThroughput
+rule COST_DYNAMODB_INDEX_THROUGHPUT when %dynamodb_index_throughput !empty {
+    %dynamodb_index_throughput {
+        ReadCapacityUnits <= 5
+        WriteCapacityUnits <= 5
+        <<
+            Violation: DynamoDB global secondary index throughput must be <= 5 RCU/WCU.
+        >>
+    }
+}
+
+let lambda_versions_and_aliases = Resources.*[ Type == 'AWS::Lambda::Version' or Type == 'AWS::Lambda::Alias' ]
+rule COST_LAMBDA_NO_PROVISIONED_CONCURRENCY when %lambda_versions_and_aliases !empty {
+    %lambda_versions_and_aliases.Properties.ProvisionedConcurrencyConfig !exists
+    <<
+        Violation: Lambda provisioned concurrency bills every hour it exists. Use on-demand concurrency.
+    >>
+}
+
+# The smallest cache (0.5 GB) costs about US$0.02/hour; bigger ones grow fast.
+let rest_api_stages = Resources.*[ Type == 'AWS::ApiGateway::Stage' ]
+let rest_api_deployment_stages = Resources.*[ Type == 'AWS::ApiGateway::Deployment'
+    Properties.StageDescription exists ].Properties.StageDescription
+rule COST_APIGATEWAY_CACHE_SIZE when %rest_api_stages !empty or %rest_api_deployment_stages !empty {
+    when %rest_api_stages !empty {
+        %rest_api_stages {
+            Properties.CacheClusterEnabled !exists or
+            Properties.CacheClusterEnabled == false or
+            Properties.CacheClusterSize == '0.5'
+            <<
+                Violation: an API Gateway cache must be the 0.5 GB size, set explicitly with CacheClusterSize.
+            >>
+        }
+    }
+    when %rest_api_deployment_stages !empty {
+        %rest_api_deployment_stages {
+            CacheClusterEnabled !exists or
+            CacheClusterEnabled == false or
+            CacheClusterSize == '0.5'
+            <<
+                Violation: an API Gateway cache must be the 0.5 GB size, set explicitly with CacheClusterSize.
+            >>
+        }
+    }
+}
+
+let ecs_services = Resources.*[ Type == 'AWS::ECS::Service' ]
+rule COST_ECS_SERVICE_COUNT when %ecs_services !empty {
+    %ecs_services {
+        Properties.DesiredCount !exists or Properties.DesiredCount in [0, 1, 2, '0', '1', '2']
+        <<
+            Violation: ECS service DesiredCount must be a literal <= 2.
+        >>
+    }
+}
+
+let ecs_task_definitions = Resources.*[ Type == 'AWS::ECS::TaskDefinition' ]
+rule COST_ECS_TASK_SIZE when %ecs_task_definitions !empty {
+    %ecs_task_definitions {
+        Properties.Cpu !exists or Properties.Cpu in [256, 512, 1024, '256', '512', '1024']
+        Properties.Memory !exists or Properties.Memory in [512, 1024, 2048, '512', '1024', '2048']
+        <<
+            Violation: ECS task size must be <= 1 vCPU (Cpu 1024) and <= 2 GiB (Memory 2048).
+        >>
+    }
+}
+
+let efs_file_systems = Resources.*[ Type == 'AWS::EFS::FileSystem' ]
+rule COST_EFS_NO_PROVISIONED_THROUGHPUT when %efs_file_systems !empty {
+    %efs_file_systems {
+        Properties.ThroughputMode !exists or Properties.ThroughputMode != 'provisioned'
+        <<
+            Violation: EFS provisioned throughput bills per MiB/s every hour. Use bursting or elastic.
+        >>
+    }
+}
+
+let retained = Resources.*[ DeletionPolicy exists ]
+rule COST_NO_RETAINED_RESOURCES when %retained !empty {
+    %retained.DeletionPolicy == 'Delete'
+    <<
+        Violation: DeletionPolicy Retain/RetainExceptOnCreate/Snapshot leaves billed resources after cleanup.
+    >>
+}
+
+let replace_retained = Resources.*[ UpdateReplacePolicy exists ]
+rule COST_NO_RETAINED_ON_REPLACE when %replace_retained !empty {
+    %replace_retained.UpdateReplacePolicy == 'Delete'
+    <<
+        Violation: UpdateReplacePolicy other than Delete leaves orphaned billed resources.
+    >>
+}
+
+let ecr_repositories = Resources.*[ Type == 'AWS::ECR::Repository' ]
+rule COST_ECR_EMPTY_ON_DELETE when %ecr_repositories !empty {
+    %ecr_repositories.Properties.EmptyOnDelete == true
+    <<
+        Violation: ECR repository needs EmptyOnDelete true or stack deletion fails and images keep billing.
+    >>
+}

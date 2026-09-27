@@ -77,6 +77,25 @@ if [[ "$kind" == "lab" ]]; then
     fi
     has_anchor "$lab_dir/solution/README.md" "solution:$n" || fail "challenge $n has no <!-- solution:$n --> in solution/README.md"
   done
+  for graded in $(sed -n 's/^check \([0-9]*\) .*/\1/p' "$lab_dir/check.sh" | sort -un); do
+    if [[ "$graded" -lt 1 || "$graded" -gt "$challenge_count" ]]; then
+      fail "check.sh grades challenge $graded but README.md has no <!-- challenge:$graded -->"
+    fi
+  done
+
+  section "Grader is read-only"
+  # The grader runs in the learner's account every time they check their score,
+  # so it may only read state. Options must come after the operation name.
+  write_calls="$(grep -vE '^[[:space:]]*#' "$lab_dir/check.sh" \
+    | grep -oE 'aws[[:space:]]+[a-z0-9-]+[[:space:]]+[a-z0-9-]+' | awk '{ print $2 " " $3 }' \
+    | grep -vE ' (ls|query|scan|(get|describe|list|head|simulate|lookup|search|filter|batch-get)-[a-z0-9-]+)$' \
+    | sort -u)"
+  if [[ -z "$write_calls" ]]; then
+    ok "check.sh only reads AWS state"
+  else
+    fail "check.sh calls AWS operations that are not read-only:"
+    echo "$write_calls" | sed 's/^/      /'
+  fi
 
   section "cfn-lint"
   require_tool cfn-lint "pipx install cfn-lint"

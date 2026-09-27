@@ -1,0 +1,92 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'DVA-C02 lab - Stop double-charging customers'
+
+# Starting environment of the scenario: everything the learner receives,
+# including what is broken on purpose. It must NOT solve any challenge.
+#   - OrdersQueue hides in-flight messages only as long as the function timeout
+#   - OrdersQueue has no dead-letter queue, although FailedOrdersQueue exists
+#   - ReconciliationQueue uses short polling
+
+Resources:
+  OrdersQueue:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      VisibilityTimeout: 30
+
+  FailedOrdersQueue:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      MessageRetentionPeriod: 1209600
+
+  ReconciliationQueue:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+
+  OrderProcessorLogs:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      RetentionInDays: 1
+
+  OrderProcessorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole
+
+  OrderProcessor:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Charges the customer for each order message
+      Runtime: python3.13
+      Handler: index.handler
+      Timeout: 30
+      MemorySize: 128
+      Role: !GetAtt OrderProcessorRole.Arn
+      LoggingConfig:
+        LogGroup: !Ref OrderProcessorLogs
+      Code:
+        ZipFile: |
+          import json
+
+          def handler(event, context):
+              for record in event["Records"]:
+                  order = json.loads(record["body"])
+                  print(f"charging order {order.get('id')}")
+
+  OrdersToProcessor:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt OrdersQueue.Arn
+      FunctionName: !Ref OrderProcessor
+      BatchSize: 10
+
+Outputs:
+  OrdersQueueUrl:
+    Description: Queue the order processor reads from
+    Value: !Ref OrdersQueue
+  FailedOrdersQueueUrl:
+    Description: Queue reserved for orders that cannot be processed
+    Value: !Ref FailedOrdersQueue
+  FailedOrdersQueueArn:
+    Description: ARN of the failed-orders queue
+    Value: !GetAtt FailedOrdersQueue.Arn
+  ReconciliationQueueUrl:
+    Description: Queue polled by the nightly reconciliation worker
+    Value: !Ref ReconciliationQueue
+  OrderProcessorName:
+    Description: Lambda function that charges customers
+    Value: !Ref OrderProcessor

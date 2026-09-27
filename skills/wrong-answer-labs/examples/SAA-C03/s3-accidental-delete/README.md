@@ -18,7 +18,8 @@ Contoso Finance publishes monthly reports to an S3 bucket. Last week an analyst 
 <!-- section:before-you-start -->
 ## Before you start
 
-- A study AWS account (never production), AWS CLI v2 configured, `jq` installed.
+- A study AWS account (never production).
+- Run every command in [AWS CloudShell](https://console.aws.amazon.com/cloudshell/home?region=us-east-1): bash, AWS CLI v2, `jq` and `git` come preinstalled and it is already signed in. Get the lab files there with `git clone` or **Actions → Upload file**. Running locally also works with bash, AWS CLI v2 and `jq`.
 - Region: `us-east-1` (use the same one in every command).
 - Environment creation time: ~1 min.
 

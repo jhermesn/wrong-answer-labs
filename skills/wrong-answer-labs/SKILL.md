@@ -1,6 +1,8 @@
 ---
-name: aws-exam-questions-to-labs
-description: Use when someone studying for an AWS Certification exam (CLF, AIF, SAA, SOA, DVA, DEA, MLA, SAP, DOP, SCS, ANS...) shares practice or exam questions they got wrong and wants to review them hands-on, as labs, CloudFormation exercises, or AWS Microcredential-style challenges ("questões que errei", "transformar questões em laboratório").
+name: wrong-answer-labs
+description: Turns AWS Certification questions a learner got wrong into hands-on labs in the style of AWS Microcredentials (CloudFormation environment, Console challenges, automated grader), or into documentation-only study notes when a lab would cost too much. Use when someone studying for an AWS Certification exam (CLF, AIF, SAA, SOA, DVA, DEA, MLA, SAP, DOP, SCS, ANS...) shares practice or exam questions they missed and wants to review them hands-on.
+license: MIT
+compatibility: Requires bash, cfn-lint, cfn-guard, shellcheck, jq and curl, plus network access for documentation lookups and link checks. AWS CLI v2 with credentials is needed only to deploy labs and run the self-test.
 ---
 
 # AWS exam questions → hands-on labs
@@ -26,11 +28,11 @@ Requires `cfn-lint`, `cfn-guard`, `shellcheck`, `jq`, `curl`; `checkov` optional
 
 ## Workflow
 
-1. **Normalize** questions as `Q1..Qn`: tested concept, services, learner's answer, correct answer. When the correct answer is not given, derive it and confirm it in official docs (AWS Documentation MCP `search_documentation` → `read_documentation`, else docs.aws.amazon.com). No confirming doc → mark `⚠️ unverified`.
+1. **Normalize** questions as `Q1..Qn`: tested concept, services, learner's answer, correct answer. When the correct answer is not given, derive it and confirm it in official AWS documentation: when the AWS Documentation MCP server (`awslabs.aws-documentation-mcp-server`) is connected, use its `search_documentation` then `read_documentation` tools; otherwise fetch docs.aws.amazon.com pages directly. No confirming doc → mark `⚠️ unverified`.
 2. **Map domains** from the official exam guide (index: https://docs.aws.amazon.com/aws-certification/latest/examguides/aws-certification-exam-guides.html).
 3. **Group** questions sharing a concept into one lab (1-5 challenges, ≤ 90 min).
 4. **Decide lab vs docs-only** with `references/cost-policy.md`.
-5. **Scaffold**: `bash <skill>/scripts/new_lab.sh <CERT> <kebab-slug> [--docs-only] [--root labs]`. It prints the lab directory.
+5. **Scaffold**: `bash <skill>/scripts/new_lab.sh <CERT> <kebab-slug> [--docs-only] [--root <dir>]`. Labs go to `./labs/<CERT>/<slug>/` in the current directory unless the user wants another `--root`. It prints the lab directory.
 6. **Fill every `{{PLACEHOLDER}}`** following `references/lab-format.md`. Prose in the user's language; code, identifiers, file names and anchors stay as shipped.
 7. **Gate**: `bash <skill>/scripts/validate_lab.sh <lab-dir>` until `PASS`. Fix the lab, never the rules.
 8. **Self-test** (labs only): creates billable resources — ask the user first, and needs AWS credentials. `bash <skill>/scripts/selftest.sh <lab-dir>` must end in `SELFTEST PASS` (baseline 0/N, solved N/N, cleanup ran).
@@ -40,7 +42,8 @@ Requires `cfn-lint`, `cfn-guard`, `shellcheck`, `jq`, `curl`; `checkov` optional
 
 | Temptation | Why it is wrong |
 |---|---|
-| Edit `rules/*.guard` or add a suppression so the template passes | Rules are the cost/security contract. A lab that needs a denied type is docs-only. Suppress a security rule only when that insecure setting is the challenge. |
+| Edit `rules/*.guard` (including adding a type to the allowlist) or add a suppression so the template passes | Rules are the cost/security contract. A lab that needs a type outside the allowlist is docs-only. Suppress a security rule only when that insecure setting is the challenge. |
+| Use a custom resource or a Lambda that creates resources | It bypasses the cost and security gate. Not allowed. |
 | Parameterize an instance type/size | Learners could deploy something bigger than the guard validated. Sizes are literals. |
 | Challenge text names the feature that answers it | Microcredentials give requirements, not solutions. State the outcome. |
 | A check passes right after deploy | The template solved the challenge. Selftest will fail. |
@@ -54,5 +57,7 @@ Requires `cfn-lint`, `cfn-guard`, `shellcheck`, `jq`, `curl`; `checkov` optional
 | `references/lab-format.md` | Scenario/challenge/grader/template rules, anchors |
 | `references/cost-policy.md` | Lab vs docs-only criteria, cost table sourcing |
 | `examples/SAA-C03/s3-accidental-delete` | Complete lab that passes the gate — copy its style |
+| `examples/DVA-C02/sqs-lambda-retries` | Three grouped questions in one lab, with a grader that computes its expected value |
 | `examples/SAA-C03/direct-connect-resiliency` | Complete docs-only entry |
+| `scripts/price.sh` | On-demand prices from the Price List API for the cost table |
 | `rules/lab-cost.guard`, `rules/lab-security.guard` | cfn-guard policy, run by the validator |
