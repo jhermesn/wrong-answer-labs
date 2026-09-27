@@ -1,144 +1,103 @@
-# wrong-answer-labs
+# Wrong Answer Labs
 
 [![ci](https://github.com/jhermesn/wrong-answer-labs/actions/workflows/ci.yml/badge.svg)](https://github.com/jhermesn/wrong-answer-labs/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Got an AWS Certification practice question wrong? Tell your coding agent the exam
-and paste the questions. This [Agent Skill](https://agentskills.io/specification)
-turns it into a **hands-on lab** in the style of
-[AWS Microcredentials](https://aws.amazon.com/blogs/training-and-certification/microcredentials-from-aws-are-now-free-heres-why-that-matters/):
-a business scenario, a CloudFormation environment, challenges you solve in the
-Console with no step-by-step, and an automated grader.
+Missed some questions on an AWS Certification practice exam? Paste them into
+your AI coding agent and get hands-on labs that make you fix exactly what you
+got wrong, in your own AWS account.
 
-Topics that cost too much or cannot be reproduced in a study account (Direct
-Connect, Outposts, Shield Advanced...) become study notes with official
-documentation instead of a lab.
+Each lab works like an
+[AWS Microcredential](https://aws.amazon.com/blogs/training-and-certification/microcredentials-from-aws-are-now-free-heres-why-that-matters/):
+a short business scenario, an environment deployed for you, challenges you
+solve in the AWS Console without step-by-step instructions, and a grader that
+checks your work. Topics too expensive or impossible to reproduce (Direct
+Connect, AWS Organizations policies, cross-account sharing...) become study
+notes with the official documentation instead.
 
-```text
-$ bash check.sh lab-saa-c03-s3-accidental-delete
-  ✅ [1] Deleted or overwritten reports can be restored
-  ✅ [2] Rule expire-noncurrent-30d is enabled
-  ✅ [2] Old versions are permanently deleted after 30 days
+## Get started
 
-Score: 3/3
-```
+You do this once.
 
-Lab prose is written in the language you use with the agent.
+1. **Install the plugin.** Inside a Claude Code session (not your terminal), run:
 
-## Why labs are safe to run
+   ```text
+   /plugin marketplace add jhermesn/wrong-answer-labs
+   /plugin install wrong-answer-labs@jhermesn
+   ```
 
-The LLM writes the lab, but tools decide whether it ships:
+   Using another agent that supports [Agent Skills](https://agentskills.io/specification)?
+   Copy the `skills/wrong-answer-labs/` folder into its skills directory.
 
-| Gate | Tool | What it checks |
-|---|---|---|
-| Cost | [cfn-guard](https://github.com/aws-cloudformation/cloudformation-guard) rules | Default deny: only reviewed resource types, small literal sizes (t3/t4g, db.t*, small volumes and task sizes), no custom resources, no retained resources |
-| Security | cfn-guard rules | No SSH/RDP open to the internet, IMDSv2, no `Action: *`, private S3, managed DB passwords |
-| Template | [cfn-lint](https://github.com/aws-cloudformation/cfn-lint) | Valid CloudFormation, best practices |
-| Grader | `validate_lab.sh` | `check.sh` only calls read-only AWS operations |
-| Scripts | [ShellCheck](https://www.shellcheck.net/) | Grader and cleanup scripts are sound |
-| Links | curl | Every doc and pricing link resolves (AWS docs soft-404s are detected) |
-| Real run | `selftest.sh` | Validate → deploy → grader scores 0/N → reference solution → N/N → cleanup |
+2. **Install the tools**, or ask your agent to install them: the
+   [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html),
+   [cfn-lint](https://github.com/aws-cloudformation/cfn-lint),
+   [cfn-guard](https://github.com/aws-cloudformation/cloudformation-guard),
+   [ShellCheck](https://www.shellcheck.net/), `jq` and `curl`.
+   On macOS: `brew install awscli cfn-lint cloudformation-guard shellcheck jq`.
 
-Every lab ships a `cleanup.sh` that empties buckets and deletes the stack.
+3. **Sign in to AWS** with `aws login`. Use a study account, never production.
 
-The gates check the template, not what happens after it is deployed: your own
-actions in the Console, or code a lab's Lambda function runs, are outside them.
-That is why every lab also lists its estimated cost and why you should set a budget.
+## Use it
 
-## Install
+1. **Tell your agent what you missed.** For example:
 
-**Claude Code (plugin):** type these inside a Claude Code session, not in your
-system shell:
+   > I'm studying for SAA-C03. These are the questions I got wrong: …
 
-```text
-/plugin marketplace add jhermesn/wrong-answer-labs
-/plugin install wrong-answer-labs@jhermesn
-```
+   Text, screenshots and PDFs all work. Include your answer and the correct
+   one if you have it; if not, the agent works it out from the AWS docs.
 
-**Any agent that supports Agent Skills:** copy `skills/wrong-answer-labs/`
-into the agent's skills directory (for Claude Code: `~/.claude/skills/`).
+2. **Get your labs.** The agent confirms each answer in the official docs,
+   groups related questions into scenarios, and writes one lab per scenario,
+   in the language you use with it. Every lab is checked for cost, security
+   and correctness before you see it (see below).
 
-Then ask:
+3. **Study.** For each lab, open its `README.md`: deploy the environment
+   (or ask the agent to), solve the challenges in the AWS Console, and run
+   `check.sh` until every item shows ✅. Stuck? `solution/README.md` explains
+   the answer and why each wrong option was wrong.
 
-> I'm studying for SAA-C03. These are the questions I got wrong: ...
+4. **Clean up.** Run `cleanup.sh` (or ask the agent to). It deletes everything
+   the lab created, including what you made during the challenges.
 
-### How you use it
+You can also ask the agent to run the self-test first: it deploys the lab,
+proves the grader and the reference solution work, and cleans up.
 
-**Once:** install the plugin, install the tools below (or let the agent do it),
-and sign in to AWS with `aws login`.
+For a complete lab and a documentation-only entry, see
+[`skills/wrong-answer-labs/examples/`](skills/wrong-answer-labs/examples/).
 
-**Every time you miss questions:**
+## Cost and safety
 
-1. Paste them into your agent with the exam code. The agent checks the answers
-   in the AWS docs, builds the labs, validates them and prices them.
-2. Optionally let it run the self-test, which deploys each lab, proves the
-   grader and the reference solution work, and cleans up.
-3. Deploy a lab (or ask the agent to), solve the challenges in the AWS Console,
-   and run `check.sh` until everything is ✅.
-4. Run `cleanup.sh` (or ask the agent to).
+Labs run in **your** AWS account, so an AI-written lab is only trusted after
+automatic checks pass:
 
-**Contributing:** your agent can branch, commit and open the pull request; CI
-tests it.
+- **Cost:** only resource types someone has reviewed are allowed, sizes are
+  capped (small instances, small databases, small disks), and nothing may
+  survive the cleanup. Each lab lists its estimated cost, taken from AWS's
+  price list; most cost well under US$1.
+- **Security:** no SSH or RDP open to the internet, no admin permissions, no
+  public buckets or databases, container images pinned to an exact version.
+- **Correctness:** the CloudFormation template is valid, the grader only reads
+  your account, every AWS command in the scripts exists, and every
+  documentation link works.
 
-### Requirements
-
-| Tool | Install |
-|---|---|
-| cfn-lint | `pipx install cfn-lint` |
-| cfn-guard | `brew install cloudformation-guard` or a [release binary](https://github.com/aws-cloudformation/cloudformation-guard/releases) |
-| ShellCheck | `brew install shellcheck` / `apt install shellcheck` |
-| jq, curl | usually preinstalled |
-| Checkov (optional) | `pipx install checkov` |
-| AWS CLI v2 | only to deploy labs and run `selftest.sh` |
-
-## What a lab looks like
-
-```
-labs/SAA-C03/s3-accidental-delete/
-  README.md            scenario, challenges, cost table, deploy and cleanup commands
-  template.yaml        starting environment (CloudFormation)
-  check.sh             automated grader
-  cleanup.sh           deletes everything the lab created
-  solution/README.md   annotated solution + answer key for your original questions
-  solution/solve.sh    reference solution through the CLI
-```
-
-See [`skills/wrong-answer-labs/examples/`](skills/wrong-answer-labs/examples/)
-for two full labs (SAA-C03 and DVA-C02) and a documentation-only entry.
-
-## Cost
-
-Labs run in **your** AWS account. The cost policy targets under US$1 per lab when
-you run the cleanup at the end, and every lab lists its estimated cost with links
-to the official pricing pages. Use a study account, never production, and set an
-[AWS Budget](https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html).
-
-## Repository layout
-
-```
-.claude-plugin/                     Claude Code plugin + marketplace manifests
-skills/wrong-answer-labs/
-  SKILL.md                          agent instructions
-  references/                       lab format and cost policy
-  rules/                            cfn-guard rules (cost + security)
-  assets/                           lab and docs-only skeletons
-  scripts/                          new_lab.sh, validate_lab.sh, selftest.sh, price.sh
-  examples/                         labs that pass every gate
-tests/                              regression tests (run: bash tests/run.sh)
-evals/                              scenarios for checking agent behavior with the skill
-```
+These checks cover the lab as written. What you do in the Console, or code a
+lab runs, is outside them, so set an
+[AWS Budget](https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html)
+and always run the cleanup.
 
 ## Contributing
 
-Found an expensive resource the rules miss, or a lab that came out wrong?
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+Found an expensive resource the checks miss, or a lab that came out wrong? See
+[CONTRIBUTING.md](CONTRIBUTING.md). Security issues go through
+[SECURITY.md](SECURITY.md).
 
 ## Disclaimer
 
 Not affiliated with, endorsed by, or sponsored by Amazon Web Services. AWS and
-AWS Certification are trademarks of Amazon.com, Inc. or its affiliates. The lab
-format is inspired by AWS Microcredentials; labs generated here are not official
-assessments. You are responsible for any AWS charges in your account.
+AWS Certification are trademarks of Amazon.com, Inc. or its affiliates. Labs
+generated here are not official assessments. You are responsible for any AWS
+charges in your account.
 
 ## License
 
