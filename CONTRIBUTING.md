@@ -26,15 +26,32 @@ Issues and pull requests are welcome.
 - **A lab that came out wrong.** Open an issue with the question you used, the
   generated lab, and what was wrong. That is how `SKILL.md` gets better.
 
+## Repository layout
+
+```
+.claude-plugin/              Claude Code plugin and marketplace manifests
+skills/wrong-answer-labs/
+  SKILL.md                   instructions the agent follows
+  references/                lab format and cost policy
+  rules/                     cfn-guard rules for cost and security
+  assets/                    skeletons for labs and docs-only entries
+  scripts/                   new_lab, validate_lab, selftest, price, image_digest
+  examples/                  labs that pass every check
+tests/                       tests for the rules and scripts (bash tests/run.sh)
+evals/                       scenarios for checking how an agent uses the skill
+```
+
 ## Checks on your PR
 
 CI runs on every pull request, with tool versions pinned in
-`.github/workflows/ci.yml`. It runs ShellCheck and `tests/run.sh`, which checks that:
+`.github/workflows/ci.yml`. It validates `SKILL.md` against the Agent Skills
+spec, runs ShellCheck, and runs `tests/run.sh`, which checks that:
 - every resource type named in the rules exists in CloudFormation;
 - every rule passes its test cases in `tests/rules/`, and has at least one
   failing case and one passing or skipped case;
 - `validate_lab.sh` accepts every example and rejects deliberately broken labs;
-- `new_lab.sh` scaffolds labs and rejects bad input.
+- `new_lab.sh`, `price.sh` and `image_digest.sh` reject bad input;
+- `selftest.sh` never deploys an unvalidated lab or adopts an existing stack.
 
 Running it locally is optional.
 
@@ -44,4 +61,4 @@ Running it locally is optional.
   learner's language.
 - A rule never gets relaxed so a lab passes. If a topic needs a denied resource,
   the lab becomes documentation-only (see `references/cost-policy.md`).
-- Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
+- Commits follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
