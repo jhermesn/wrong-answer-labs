@@ -136,6 +136,10 @@ check 1 "Old copies are removed 30 days after they stop being current" "30" \
 - Read state with the AWS CLI; filter with `--query` (JMESPath) down to one
   scalar compared by exact match. For a boolean condition, make the query
   return `true`/`false` (e.g. `length(...) > \`0\``).
+- When one expression reads several fields of the same item, pipe the item
+  first: `AutoScalingGroups[0] | MinSize >= \`2\` && MaxSize <= \`3\``.
+  Without the pipe, `MaxSize` is read from the top level and the check
+  always returns `None`.
 - Grade the **resulting configuration**, not the path taken. Accept every
   valid solution the exam would accept (e.g. check the effective permission
   with `aws iam simulate-principal-policy` instead of a specific policy name).
@@ -146,11 +150,19 @@ check 1 "Old copies are removed 30 days after they stop being current" "30" \
 Replace `{{CHALLENGE_CLEANUP}}` with idempotent deletes (`|| true`) of every
 resource the learner creates outside the stack (by the exact names the
 challenges required), or with `# The challenges only change stack resources.`
+Undo anything a challenge adds that blocks `delete-stack`, such as deletion
+protection. Use `aws <service> wait <waiter>` only when that waiter exists (the
+validator checks every AWS CLI command); otherwise poll with a bounded loop.
 
 ## Solution (`solution/README.md` + `solution/solve.sh`)
 
 - Per challenge: Console steps, the CLI equivalent (same commands as
   `solve.sh`), and **why** this is what the exam wants.
+- AWS changes take time to propagate. When a call can fail right after its
+  inputs were created (a new web ACL, IAM role or KMS grant), retry it for up
+  to several minutes, then exit non-zero with the last error. Never discard
+  errors (`2>/dev/null`) inside a retry loop: a silent failure only shows up
+  later as a wrong grade.
 - Per source question: the question (summarized), the learner's answer, the
   correct answer, why each wrong option is wrong, and the doc link that proves
   it. Mark the answer `⚠️ unverified` when no official doc confirms it.

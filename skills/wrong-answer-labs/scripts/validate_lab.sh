@@ -97,6 +97,31 @@ if [[ "$kind" == "lab" ]]; then
     echo "$write_calls" | sed 's/^/      /'
   fi
 
+  section "AWS CLI commands exist"
+  # Catches invented operations and waiters (e.g. `aws autoscaling wait ...`,
+  # which does not exist) before they fail in a real account.
+  if command -v aws >/dev/null; then
+    unknown_commands=""
+    while read -r service operation waiter; do
+      if [[ "$operation" == "wait" ]]; then
+        command_words=("$service" wait "$waiter")
+      else
+        command_words=("$service" "$operation")
+      fi
+      aws "${command_words[@]}" help >/dev/null 2>&1 || unknown_commands+="aws ${command_words[*]}"$'\n'
+    done < <(cat "$lab_dir"/*.sh "$lab_dir"/solution/*.sh | grep -vE '^[[:space:]]*#' \
+      | grep -oE 'aws[[:space:]]+[a-z0-9-]+[[:space:]]+[a-z0-9-]+([[:space:]]+[a-z0-9-]+)?' \
+      | awk '{ print $2, $3, ($3 == "wait" ? $4 : "") }' | sort -u)
+    if [[ -z "$unknown_commands" ]]; then
+      ok "every AWS CLI command in the scripts exists"
+    else
+      fail "AWS CLI commands that do not exist:"
+      printf '%s' "$unknown_commands" | sed 's/^/      /'
+    fi
+  else
+    echo "  - AWS CLI not installed, skipped"
+  fi
+
   section "cfn-lint"
   require_tool cfn-lint "pipx install cfn-lint"
   if cfn-lint --non-zero-exit-code warning "$lab_dir/template.yaml"; then ok "cfn-lint clean"; else fail "cfn-lint findings above"; fi

@@ -123,6 +123,8 @@ install_fake_aws() {
   mkdir -p "$WORK_DIR/bin"
   cat >"$WORK_DIR/bin/aws" <<'EOF'
 #!/usr/bin/env bash
+# `aws ... help` makes no API call; validate_lab.sh uses it to check commands exist.
+[[ "${!#}" == "help" ]] && exit 0
 echo "$*" >>"$AWS_CALLS"
 [[ "$1 $2" == "cloudformation describe-stacks" && "${STACK_EXISTS:-0}" == "1" ]] && exit 0
 exit 1
@@ -181,6 +183,12 @@ expect_rejected invalid-template "$EXAMPLE_LAB" "cfn-lint findings" \
   "sed -i.bak 's/BucketEncryption:/BucketEncryptionTypo:/' template.yaml"
 expect_rejected mutating-grader "$EXAMPLE_LAB" "check.sh calls AWS operations that are not read-only" \
   "printf 'check 1 \"x\" \"y\" aws s3api put-bucket-versioning --bucket b\n' >> check.sh"
+if command -v aws >/dev/null; then
+  expect_rejected invented-cli-command "$EXAMPLE_LAB" "AWS CLI commands that do not exist" \
+    "echo 'aws autoscaling wait group-not-exists --auto-scaling-group-names web-asg || true' >> cleanup.sh"
+else
+  echo "  SKIP invented-cli-command (AWS CLI not installed)"
+fi
 expect_rejected unsafe-script "$EXAMPLE_LAB" "shellcheck findings" \
   "echo 'unused_variable=1' >> cleanup.sh"
 expect_rejected docs-without-questions "$EXAMPLE_DOCS" "no <!-- question:Q<n> --> blocks" \
