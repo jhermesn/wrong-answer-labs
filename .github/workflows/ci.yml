@@ -1,8 +1,6 @@
 name: ci
 
 on:
-  push:
-    branches: [main]
   pull_request:
 
 permissions:
@@ -10,13 +8,17 @@ permissions:
 
 env:
   CFN_LINT_VERSION: 1.57.0
-  CFN_GUARD_VERSION: 3.2.1
-  CFN_GUARD_SHA256: 09c2b8cfd81d513374a8da89d4805dc55006a3da52bbf598e272022d4d198e94
+  # cfn-guard 3.2.1 is not on crates.io (latest there is 3.2.0), so build it from
+  # the commit behind the 3.2.1 tag. A commit SHA, unlike a tag, cannot be moved.
+  CFN_GUARD_REPO: https://github.com/aws-cloudformation/cloudformation-guard
+  CFN_GUARD_REV: e531ef56092abb662e08fc6062c92db6d53f99c9 # 3.2.1
+  # Agent Skills spec validator (not published to PyPI), pinned to a commit.
+  SKILLS_REF: git+https://github.com/agentskills/agentskills@69ef37e9424c0a7ea9dd2293b559e43ec8176379#subdirectory=skills-ref
 
 jobs:
   test:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -24,12 +26,12 @@ jobs:
         run: pipx install "cfn-lint==${CFN_LINT_VERSION}"
 
       - name: Install cfn-guard
+        run: cargo install cfn-guard --git "${CFN_GUARD_REPO}" --rev "${CFN_GUARD_REV}" --locked
+
+      - name: Validate skill against the Agent Skills spec
         run: |
-          curl -sSfL -o guard.tgz \
-            "https://github.com/aws-cloudformation/cloudformation-guard/releases/download/${CFN_GUARD_VERSION}/cfn-guard-v3-x86_64-ubuntu-latest.tar.gz"
-          echo "${CFN_GUARD_SHA256}  guard.tgz" | sha256sum --check
-          tar -xzf guard.tgz
-          sudo install cfn-guard-v3-x86_64-ubuntu-latest/cfn-guard /usr/local/bin/cfn-guard
+          pipx install "${SKILLS_REF}"
+          for skill in skills/*/; do skills-ref validate "${skill%/}"; done
 
       - name: ShellCheck
         run: shellcheck -S warning skills/*/scripts/*.sh skills/*/assets/lab/*.sh skills/*/assets/lab/solution/*.sh tests/*.sh
