@@ -35,7 +35,7 @@ Requires `cfn-lint`, `cfn-guard`, `shellcheck`, `jq`, `curl`; `checkov` optional
 5. **Scaffold**: `bash <skill>/scripts/new_lab.sh <CERT> <kebab-slug> [--docs-only] [--root <dir>]`. Labs go to `./labs/<CERT>/<slug>/` in the current directory unless the user wants another `--root`. It prints the lab directory.
 6. **Fill every `{{PLACEHOLDER}}`** following `references/lab-format.md`. Prose in the user's language; code, identifiers, file names and anchors stay as shipped.
 7. **Gate**: `bash <skill>/scripts/validate_lab.sh <lab-dir>` until `PASS`. Fix the lab, never the rules.
-8. **Self-test** (labs only): creates billable resources — ask the user first, and needs AWS credentials. `bash <skill>/scripts/selftest.sh <lab-dir>` must end in `SELFTEST PASS` (baseline 0/N, solved N/N, cleanup ran).
+8. **Self-test** (labs only): offer it for every lab and recommend it, because a lab can pass every static check and still fail in a real account. It creates billable resources (usually cents) and needs AWS credentials, so run it only after the user agrees. `bash <skill>/scripts/selftest.sh <lab-dir>` must end in `SELFTEST PASS` (baseline 0/N, solved N/N, cleanup ran); if it fails, fix the lab and run it again.
 9. **Report**: one row per lab/docs-only entry with questions covered, estimated cost, validator result, and self-test result (or "not run" and why).
 
 ## Red flags — stop and fix the lab
