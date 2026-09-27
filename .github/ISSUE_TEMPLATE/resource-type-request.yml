@@ -1,0 +1,46 @@
+name: Allow a resource type
+description: A lab needs an AWS resource type that the cost rules do not allow yet.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The cost rules only allow resource types someone has reviewed for price. Help review this one.
+
+  - type: input
+    id: type
+    attributes:
+      label: CloudFormation resource type
+      placeholder: AWS::MemoryDB::Cluster
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Which exam topic needs it
+      description: The certification and the kind of question a lab with this resource would cover.
+    validations:
+      required: true
+
+  - type: input
+    id: pricing
+    attributes:
+      label: Pricing page
+      placeholder: https://aws.amazon.com/memorydb/pricing/
+    validations:
+      required: true
+
+  - type: textarea
+    id: smallest
+    attributes:
+      label: Smallest useful setup and its cost
+      description: The smallest size and count that still teaches the topic, and roughly what one lab would cost with it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: knobs
+    attributes:
+      label: Settings that can grow the bill
+      description: Instance size, node count, provisioned capacity, or anything else a size rule should cap.

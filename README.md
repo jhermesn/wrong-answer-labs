@@ -1,5 +1,7 @@
 # Wrong Answer Labs
 
+![Understand what you got wrong, with labs](.github/assets/banner.png)
+
 [![ci](https://github.com/jhermesn/wrong-answer-labs/actions/workflows/ci.yml/badge.svg)](https://github.com/jhermesn/wrong-answer-labs/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
