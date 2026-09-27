@@ -47,7 +47,8 @@ That is why every lab also lists its estimated cost and why you should set a bud
 
 ## Install
 
-**Claude Code (plugin):**
+**Claude Code (plugin):** type these inside a Claude Code session, not in your
+system shell:
 
 ```text
 /plugin marketplace add jhermesn/wrong-answer-labs
@@ -60,6 +61,24 @@ into the agent's skills directory (for Claude Code: `~/.claude/skills/`).
 Then ask:
 
 > I'm studying for SAA-C03. These are the questions I got wrong: ...
+
+### How you use it
+
+**Once:** install the plugin, install the tools below (or let the agent do it),
+and sign in to AWS with `aws login`.
+
+**Every time you miss questions:**
+
+1. Paste them into your agent with the exam code. The agent checks the answers
+   in the AWS docs, builds the labs, validates them and prices them.
+2. Optionally let it run the self-test, which deploys each lab, proves the
+   grader and the reference solution work, and cleans up.
+3. Deploy a lab (or ask the agent to), solve the challenges in the AWS Console,
+   and run `check.sh` until everything is ✅.
+4. Run `cleanup.sh` (or ask the agent to).
+
+**Contributing:** your agent can branch, commit and open the pull request; CI
+tests it.
 
 ### Requirements
 

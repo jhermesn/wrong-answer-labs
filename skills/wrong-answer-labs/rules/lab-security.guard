@@ -165,3 +165,13 @@ rule SEC_SECRET_PARAMETERS_NOECHO when %secret_parameters !empty {
         Violation: secret-like parameters must set NoEcho: true (prefer Secrets Manager dynamic references).
     >>
 }
+
+# Tags can be moved to a different image; a digest cannot. Resolve a tag with
+# scripts/image_digest.sh.
+let container_images = Resources.*[ Type == 'AWS::ECS::TaskDefinition' ].Properties.ContainerDefinitions[*].Image
+rule SEC_CONTAINER_IMAGE_PINNED when %container_images !empty {
+    %container_images == /@sha256:[0-9a-f]{64}$/
+    <<
+        Violation: container images must be pinned by digest (repository@sha256:...), not by tag.
+    >>
+}

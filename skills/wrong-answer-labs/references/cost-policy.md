@@ -9,6 +9,7 @@ A topic becomes a **docs-only** entry when ANY row applies. Otherwise build a la
 | 3 | Stack costs > US$0.50/hour, or > US$1.00 for the whole lab (deploy + solve + delete) | Redshift provisioned, MSK, FSx, OpenSearch Serverless, Kendra, EMR on EC2, CloudHSM, non-burstable RDS/Aurora classes |
 | 4 | Needs an Organizations management account, root user, or an account-wide change that is hard to undo | Control Tower landing zone, SCPs, IAM Identity Center organization instance, support plan changes, service quota increases |
 | 5 | Deploy + delete takes > 30 min | Managed Microsoft AD, large Aurora global databases |
+| 6 | Needs a second AWS account, or a principal the learner does not control | Cross-account AMI or snapshot sharing, cross-account KMS grants, RAM shares with another account |
 
 `rules/lab-cost.guard` enforces rows 2-3 mechanically, default deny: a
 resource type passes only if it is on the reviewed allowlist, and types with a
@@ -43,7 +44,7 @@ credentials, ask the user to sign in (`aws login`) before writing the table.
 
 ## Docs-only entry
 
-- `why-no-lab`: which criterion (1-5) applies, with the price or constraint.
+- `why-no-lab`: which criterion (1-6) applies, with the price or constraint.
 - `concepts`: what the exam expects, framed by the wrong answers.
 - `references`: official AWS docs, found as described in SKILL.md step 1.
   Prefer User Guide pages plus the relevant FAQ.

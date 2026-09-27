@@ -30,7 +30,7 @@ Requires `cfn-lint`, `cfn-guard`, `shellcheck`, `jq`, `curl`; `checkov` optional
 
 1. **Normalize** questions as `Q1..Qn`: tested concept, services, learner's answer, correct answer. When the correct answer is not given, derive it and confirm it in official AWS documentation: when the AWS Documentation MCP server (`awslabs.aws-documentation-mcp-server`) is connected, use its `search_documentation` then `read_documentation` tools; otherwise fetch docs.aws.amazon.com pages directly. No confirming doc → mark `⚠️ unverified`.
 2. **Map domains** from the official exam guide (index: https://docs.aws.amazon.com/aws-certification/latest/examguides/aws-certification-exam-guides.html).
-3. **Group** questions sharing a concept into one lab (1-5 challenges, ≤ 90 min).
+3. **Split into scenarios**: one lab per realistic scenario (1-5 challenges, ≤ 90 min). Questions that fit the same scenario share a lab (Multi-AZ database + load balancer + WAF are one "highly available web tier"); questions that do not fit together get a lab each. Never force unrelated questions into one lab.
 4. **Decide lab vs docs-only** with `references/cost-policy.md`.
 5. **Scaffold**: `bash <skill>/scripts/new_lab.sh <CERT> <kebab-slug> [--docs-only] [--root <dir>]`. Labs go to `./labs/<CERT>/<slug>/` in the current directory unless the user wants another `--root`. It prints the lab directory.
 6. **Fill every `{{PLACEHOLDER}}`** following `references/lab-format.md`. Prose in the user's language; code, identifiers, file names and anchors stay as shipped.
@@ -44,6 +44,8 @@ Requires `cfn-lint`, `cfn-guard`, `shellcheck`, `jq`, `curl`; `checkov` optional
 |---|---|
 | Edit `rules/*.guard` (including adding a type to the allowlist) or add a suppression so the template passes | Rules are the cost/security contract. A lab that needs a type outside the allowlist is docs-only. Suppress a security rule only when that insecure setting is the challenge. |
 | Use a custom resource or a Lambda that creates resources | It bypasses the cost and security gate. Not allowed. |
+| Create, change or delete AWS resources while writing a lab ("just a quick probe") | Only `selftest.sh` touches the account, and only after the user agrees. Check facts in the docs, with `cfn-lint`, or with read-only calls. |
+| Handwrite an app, container image or sample data | Use what already exists and is maintained first; see "Apps, images and code" in `references/lab-format.md`. |
 | Parameterize an instance type/size | Learners could deploy something bigger than the guard validated. Sizes are literals. |
 | Challenge text names the feature that answers it | Microcredentials give requirements, not solutions. State the outcome. |
 | A check passes right after deploy | The template solved the challenge. Selftest will fail. |
@@ -60,4 +62,5 @@ Requires `cfn-lint`, `cfn-guard`, `shellcheck`, `jq`, `curl`; `checkov` optional
 | `examples/DVA-C02/sqs-lambda-retries` | Three grouped questions in one lab, with a grader that computes its expected value |
 | `examples/SAA-C03/direct-connect-resiliency` | Complete docs-only entry |
 | `scripts/price.sh` | On-demand prices from the Price List API for the cost table |
+| `scripts/image_digest.sh` | Pins an Amazon ECR Public image tag to its digest |
 | `rules/lab-cost.guard`, `rules/lab-security.guard` | cfn-guard policy, run by the validator |

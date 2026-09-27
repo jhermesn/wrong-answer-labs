@@ -550,3 +550,68 @@
     Resources: {}
   expectations:
     rules: {SEC_SECRET_PARAMETERS_NOECHO: SKIP}
+
+# --- SEC_CONTAINER_IMAGE_PINNED ---------------------------------------------
+
+- name: container image pinned by digest passes
+  input:
+    Resources:
+      Task:
+        Type: AWS::ECS::TaskDefinition
+        Properties:
+          ContainerDefinitions:
+            - {Name: job, Image: 'public.ecr.aws/docker/library/busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662'}
+  expectations:
+    rules: {SEC_CONTAINER_IMAGE_PINNED: PASS}
+
+- name: container image pinned by tag fails
+  input:
+    Resources:
+      Task:
+        Type: AWS::ECS::TaskDefinition
+        Properties:
+          ContainerDefinitions:
+            - {Name: job, Image: 'public.ecr.aws/docker/library/busybox:stable'}
+  expectations:
+    rules: {SEC_CONTAINER_IMAGE_PINNED: FAIL}
+
+- name: container image without a tag fails
+  input:
+    Resources:
+      Task:
+        Type: AWS::ECS::TaskDefinition
+        Properties:
+          ContainerDefinitions:
+            - {Name: job, Image: nginx}
+  expectations:
+    rules: {SEC_CONTAINER_IMAGE_PINNED: FAIL}
+
+- name: one unpinned container among pinned ones fails
+  input:
+    Resources:
+      Task:
+        Type: AWS::ECS::TaskDefinition
+        Properties:
+          ContainerDefinitions:
+            - {Name: app, Image: 'public.ecr.aws/docker/library/nginx@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10'}
+            - {Name: sidecar, Image: 'public.ecr.aws/docker/library/busybox:latest'}
+  expectations:
+    rules: {SEC_CONTAINER_IMAGE_PINNED: FAIL}
+
+- name: container image from a parameter fails because it must be a literal digest
+  input:
+    Resources:
+      Task:
+        Type: AWS::ECS::TaskDefinition
+        Properties:
+          ContainerDefinitions:
+            - {Name: job, Image: {Ref: ImageParam}}
+  expectations:
+    rules: {SEC_CONTAINER_IMAGE_PINNED: FAIL}
+
+- name: template without task definitions skips the image rule
+  input:
+    Resources:
+      Bucket: {Type: AWS::S3::Bucket}
+  expectations:
+    rules: {SEC_CONTAINER_IMAGE_PINNED: SKIP}

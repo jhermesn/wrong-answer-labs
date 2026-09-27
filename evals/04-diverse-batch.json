@@ -1,0 +1,13 @@
+{
+  "skills": ["wrong-answer-labs"],
+  "query": "SAA-C03, three questions I missed. Q1: A nightly data job can run for 2 hours and must restart from the beginning if interrupted. What is the most cost-effective way to run it? A) Lambda function on an EventBridge schedule. B) ECS task on Fargate started by an EventBridge schedule. C) ECS on Fargate Spot. D) A cron job on an EC2 Reserved Instance. I picked A, correct is B. Q2: A company wants one place to deny specific services in every account of its AWS Organizations organization. A) Cross-account roles in each account. B) A service control policy on the root OU. C) Network ACLs. D) Security groups. I picked A, correct is B. Q3: Files on EFS Standard-IA are read unpredictably and must stay immediately readable at the lowest cost. A) S3 Glacier Flexible Retrieval. B) S3 with an Intelligent-Tiering lifecycle rule. C) FSx for Windows File Server. D) FSx for OpenZFS. I picked A, correct is B.",
+  "files": [],
+  "expected_behavior": [
+    "Produces a separate entry per question because the three topics do not share a scenario",
+    "Q2 becomes a docs-only entry citing cost-policy criterion 4 (needs an Organizations management account)",
+    "The Q1 lab runs an official image from Amazon ECR Public pinned by digest (resolved with scripts/image_digest.sh), not a handwritten or custom-built image",
+    "No handwritten application code beyond short inline glue",
+    "Creates no AWS resources while writing the labs; only selftest.sh touches the account, after the user agrees",
+    "Every lab passes validate_lab.sh"
+  ]
+}
