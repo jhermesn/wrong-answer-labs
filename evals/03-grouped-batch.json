@@ -1,0 +1,14 @@
+{
+  "skills": ["wrong-answer-labs"],
+  "query": "DVA-C02, three questions I got wrong. Q1: A Lambda function processes orders from an SQS standard queue. Some orders are processed twice. The function timeout is 30 seconds and the queue visibility timeout is 30 seconds. What should the developer do? A) Increase the function memory. B) Set the queue visibility timeout to at least six times the function timeout. C) Switch to a FIFO queue. D) Enable long polling. I answered C, correct is B. Q2: Some order messages fail every time and keep being retried. The team wants to set them aside for later analysis without blocking other messages. A) Configure a dead-letter queue with a redrive policy on the source queue. B) Increase the message retention period to 14 days. C) Use a delay queue. D) Configure a Lambda on-failure destination. I answered D, correct is A. Q3: A worker that polls an SQS queue makes many ReceiveMessage calls that return no messages, which increases cost. How can this be reduced? A) Use short polling with MaxNumberOfMessages set to 10. B) Enable long polling by setting ReceiveMessageWaitTimeSeconds greater than 0. C) Increase the visibility timeout. D) Use a FIFO queue. I answered A and don't know the right answer.",
+  "files": [],
+  "expected_behavior": [
+    "Groups all three questions into one lab because they share the SQS + Lambda concept",
+    "Derives the Q3 answer (B) and confirms it in official SQS documentation before using it",
+    "Uses the documented recommendations: visibility timeout at least six times the function timeout, maxReceiveCount of at least 5",
+    "Gets prices from scripts/price.sh (or asks the user to sign in), not from memory",
+    "Template passes the cost gate using only allowlisted types and creates its Lambda log group so cleanup leaves nothing behind",
+    "check.sh uses only read-only AWS operations and grades each question's concept in its own challenge",
+    "selftest.sh ends in SELFTEST PASS after the user agrees to run it"
+  ]
+}

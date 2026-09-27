@@ -1,0 +1,13 @@
+{
+  "skills": ["wrong-answer-labs"],
+  "query": "I'm studying for SAA-C03 and got this wrong. A company stores monthly reports in an S3 bucket. An analyst accidentally deleted three months of reports. The company must be able to recover deleted or overwritten reports and wants to keep storage costs low. Which solution meets these requirements? A) Enable MFA Delete on the bucket. B) Enable S3 Versioning and add a lifecycle rule that expires noncurrent versions. C) Enable S3 Object Lock in compliance mode. D) Configure Cross-Region Replication to a second bucket. I answered A. The correct answer is B.",
+  "files": [],
+  "expected_behavior": [
+    "Builds one lab (not docs-only) under labs/SAA-C03/<slug>/ with new_lab.sh",
+    "Challenge text asks for recoverability and bounded cost without naming versioning, MFA Delete or lifecycle rules",
+    "check.sh scores 0/N right after deploy and N/N after solution/solve.sh",
+    "solution/README.md explains why A, C and D are wrong and links official S3 documentation",
+    "validate_lab.sh ends in PASS before the lab is reported as done",
+    "Asks before running selftest.sh, because it creates billable resources"
+  ]
+}

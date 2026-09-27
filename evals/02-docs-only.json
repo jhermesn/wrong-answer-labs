@@ -1,0 +1,12 @@
+{
+  "skills": ["wrong-answer-labs"],
+  "query": "SAA-C03 question I missed: A company needs highly resilient hybrid connectivity between its data center and AWS for critical workloads. Which option provides maximum resiliency? A) One Direct Connect connection with two virtual interfaces. B) Two Direct Connect connections at one Direct Connect location. C) Two Direct Connect connections terminating at two separate Direct Connect locations. D) A single Site-to-Site VPN connection. I picked A.",
+  "files": [],
+  "expected_behavior": [
+    "Produces a docs-only entry with new_lab.sh --docs-only, not a CloudFormation lab",
+    "The why-no-lab section cites cost-policy criterion 1 (needs a physical cross-connect through a partner or carrier)",
+    "Derives the correct answer (C) itself and confirms it in official Direct Connect documentation, or marks it unverified",
+    "Every documentation link resolves and none is a soft 404 (validate_lab.sh passes online)",
+    "Suggests an honest low-cost practice (for example a Site-to-Site VPN on a Transit Gateway) or says none exists"
+  ]
+}
