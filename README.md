@@ -62,16 +62,23 @@ Then ask:
 
 > I'm studying for SAA-C03. These are the questions I got wrong: ...
 
-### Who runs what
+### How you use it
 
-| Step | Who |
-|---|---|
-| Install the plugin, sign in to AWS (`aws login`) | You, once |
-| Install cfn-lint, cfn-guard, ShellCheck | You once, or the agent if you let it |
-| Check answers, write labs, validate, price, self-test | The agent |
-| Deploy a lab, solve it in the Console, run `check.sh`, run `cleanup.sh` | You (that is the lab), or ask the agent to deploy and clean up |
-| Contribute: branch, commit, open a pull request | You or your agent |
-| Test every pull request | CI |
+**Once:** install the plugin, install the tools below (or let the agent do it),
+and sign in to AWS with `aws login`.
+
+**Every time you miss questions:**
+
+1. Paste them into your agent with the exam code. The agent checks the answers
+   in the AWS docs, builds the labs, validates them and prices them.
+2. Optionally let it run the self-test, which deploys each lab, proves the
+   grader and the reference solution work, and cleans up.
+3. Deploy a lab (or ask the agent to), solve the challenges in the AWS Console,
+   and run `check.sh` until everything is ✅.
+4. Run `cleanup.sh` (or ask the agent to).
+
+**Contributing:** your agent can branch, commit and open the pull request; CI
+tests it.
 
 ### Requirements
 
