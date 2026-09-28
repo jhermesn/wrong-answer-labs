@@ -39,6 +39,7 @@ skills/wrong-answer-labs/
   examples/                  labs that pass every check
 tests/                       tests for the rules and scripts (bash tests/run.sh)
 evals/                       scenarios for checking how an agent uses the skill
+docs/                        maintainer documentation and ADRs (docs/decisions/)
 ```
 
 ## Checks on your PR
