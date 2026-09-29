@@ -32,7 +32,7 @@ passes the guard by dropping the tested concept is docs-only too.
 
 | Step | What happens | Tool / file |
 |---|---|---|
-| 1. Normalize | Each question becomes `Qn`: concept, services, learner's answer, correct answer. Missing answers are derived and confirmed in official AWS docs (AWS Documentation MCP server when connected, else docs.aws.amazon.com). No confirming doc → `⚠️ unverified`. | — |
+| 1. Normalize | Each question becomes `Qn`: concept, services, learner's answer, correct answer. Missing answers are derived and confirmed in official AWS docs (an AWS MCP server's documentation tools when connected, such as the Agent Toolkit for AWS's AWS MCP Server or `awslabs.aws-documentation-mcp-server`, else docs.aws.amazon.com). No confirming doc → `⚠️ unverified`. | — |
 | 2. Map domains | Match each question to the official exam guide domains. | Exam guide index |
 | 3. Split into scenarios | One lab per realistic scenario, 1–5 challenges, ≤ 90 min. Related questions share a lab; unrelated ones never do. | — |
 | 4. Lab vs docs-only | Apply the criteria above. | `cost-policy.md` |
@@ -50,6 +50,7 @@ account:
 - editing `rules/*.guard` or adding suppressions to make a template pass;
 - custom resources or Lambda functions that create resources;
 - any AWS write while authoring ("just a quick probe");
+- AWS MCP server tools beyond documentation and read-only calls (`call_aws` writes, `run_script`, change sets, pre-deployment validation);
 - parameterized instance types or sizes (the guard can only validate literals);
 - prices or doc URLs from memory.
 
