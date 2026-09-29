@@ -40,6 +40,19 @@ You do this once.
 
 3. **Sign in to AWS** with `aws login`. Use a study account, never production.
 
+4. **Optional: install the AWS MCP Server** so the agent searches the AWS
+   documentation through it instead of fetching pages. In Claude Code:
+
+   ```text
+   /plugin install aws-core@claude-plugins-official
+   /reload-plugins
+   ```
+
+   Other agents: see
+   [Setting up the AWS MCP Server](https://docs.aws.amazon.com/agent-toolkit/latest/userguide/getting-started-aws-mcp-server.html).
+   While writing labs, the skill uses it only for documentation lookups and
+   read-only calls.
+
 ## Use it
 
 1. **Tell your agent what you missed.** For example:
