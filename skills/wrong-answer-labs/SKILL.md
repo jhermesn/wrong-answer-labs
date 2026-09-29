@@ -28,7 +28,7 @@ Requires `cfn-lint`, `cfn-guard`, `shellcheck`, `jq`, `curl`; `checkov` optional
 
 ## Workflow
 
-1. **Normalize** questions as `Q1..Qn`: tested concept, services, learner's answer, correct answer. When the correct answer is not given, derive it and confirm it in official AWS documentation: when the AWS Documentation MCP server (`awslabs.aws-documentation-mcp-server`) is connected, use its `search_documentation` then `read_documentation` tools; otherwise fetch docs.aws.amazon.com pages directly. No confirming doc → mark `⚠️ unverified`.
+1. **Normalize** questions as `Q1..Qn`: tested concept, services, learner's answer, correct answer. When the correct answer is not given, derive it and confirm it in official AWS documentation: when an AWS MCP server with documentation tools is connected (the AWS MCP Server from the Agent Toolkit for AWS, e.g. via the `aws-core` plugin, whose tools end in `aws___search_documentation` and `aws___read_documentation`; or `awslabs.aws-documentation-mcp-server`), search then read with it; otherwise fetch docs.aws.amazon.com pages directly. No confirming doc → mark `⚠️ unverified`.
 2. **Map domains** from the official exam guide (index: https://docs.aws.amazon.com/aws-certification/latest/examguides/aws-certification-exam-guides.html).
 3. **Split into scenarios**: one lab per realistic scenario (1-5 challenges, ≤ 90 min). Questions that fit the same scenario share a lab (Multi-AZ database + load balancer + WAF are one "highly available web tier"); questions that do not fit together get a lab each. Never force unrelated questions into one lab.
 4. **Decide lab vs docs-only** with `references/cost-policy.md`.
@@ -45,6 +45,7 @@ Requires `cfn-lint`, `cfn-guard`, `shellcheck`, `jq`, `curl`; `checkov` optional
 | Edit `rules/*.guard` (including adding a type to the allowlist) or add a suppression so the template passes | Rules are the cost/security contract. A lab that needs a type outside the allowlist is docs-only. Suppress a security rule only when that insecure setting is the challenge. |
 | Use a custom resource or a Lambda that creates resources | It bypasses the cost and security gate. Not allowed. |
 | Create, change or delete AWS resources while writing a lab ("just a quick probe") | Only `selftest.sh` touches the account, and only after the user agrees. Check facts in the docs, with `cfn-lint`, or with read-only calls. |
+| Use an AWS MCP server's `call_aws` for anything but a read-only call, its `run_script`, a change set, or pre-deployment validation (another AWS skill may suggest them) | They write to or run code in the learner's account. Validation while authoring is `validate_lab.sh`. |
 | Handwrite an app, container image or sample data | Use what already exists and is maintained first; see "Apps, images and code" in `references/lab-format.md`. |
 | Parameterize an instance type/size | Learners could deploy something bigger than the guard validated. Sizes are literals. |
 | Challenge text names the feature that answers it | Microcredentials give requirements, not solutions. State the outcome. |
