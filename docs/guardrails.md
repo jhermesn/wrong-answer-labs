@@ -9,12 +9,12 @@ is the static gate between the two: it needs no AWS credentials and must print
 | Stage | Applies to | Fails when |
 |---|---|---|
 | Files and sections | Both | A required file is missing/empty, a `section:*` anchor is missing, any `{{PLACEHOLDER}}` remains, or there is no `question:Qn` block |
-| Challenges vs grader vs solution | Lab | Not 1–5 `challenge:N` anchors, a numbering gap, a challenge with no `check N` line or no `solution:N`, or a `check N` for a challenge that does not exist |
+| Challenges vs grader vs solution | Lab | Not 1 to 5 `challenge:N` anchors, a numbering gap, a challenge with no `check N` line or no `solution:N`, or a `check N` for a challenge that does not exist |
 | Grader is read-only | Lab | `check.sh` calls an AWS operation outside the read-only set |
 | AWS CLI commands exist | Lab | Any `aws <service> <operation>` (or `aws <service> wait <waiter>`) in the scripts has no `help` page. Skipped when the AWS CLI is not installed |
 | cfn-lint | Lab | Any error or warning (`--non-zero-exit-code warning`) |
 | cfn-guard | Lab | Any rule in `rules/*.guard` fails |
-| checkov | Lab | Never — advisory only, skipped if not installed |
+| checkov | Lab | Never; advisory only, skipped if not installed |
 | shellcheck | Lab | Any finding at severity `warning` or above |
 | Links | Both | Any `https://` URL in `*.md` is not 2xx, or is a docs.aws.amazon.com soft 404 (200 with a meta refresh). Skipped with `--offline` |
 
@@ -29,7 +29,7 @@ it may only read. Allowed operations, matched as `aws <service> <operation>`:
 `get-*`, `describe-*`, `list-*`, `head-*`, `simulate-*`, `lookup-*`,
 `search-*`, `filter-*`, `batch-get-*`, `query`, `scan`, `ls`.
 
-Global options must come **after** the operation. `aws --region x s3api ...`
+Global options must come after the operation. `aws --region x s3api ...`
 is parsed as service `--region`, operation `x` and rejected, which fails
 closed rather than open.
 
@@ -40,7 +40,7 @@ docs-only entry ([ADR 0001](decisions/0001-default-deny-cost-gate.md)).
 
 ### Allowlist
 
-`COST_ALLOWED_RESOURCE_TYPES` is **default deny**: 176 reviewed resource types
+`COST_ALLOWED_RESOURCE_TYPES` is default deny: 176 reviewed resource types
 pass, everything else fails, including `Custom::*` and
 `AWS::CloudFormation::CustomResource` (their Lambda could create anything
 outside the gate). Explicitly not allowed today (docs-only until someone adds
@@ -57,7 +57,7 @@ bigger size than the one validated.
 |---|---|
 | `COST_EC2_INSTANCE_TYPE` | EC2 instance: `t3`/`t4g` `nano`/`micro`/`small` |
 | `COST_LAUNCH_TEMPLATE_INSTANCE_TYPE` | Same, for launch templates that set an instance type |
-| `COST_ASG_MAX_SIZE` | Auto Scaling group `MaxSize` 1–3 |
+| `COST_ASG_MAX_SIZE` | Auto Scaling group `MaxSize` 1 to 3 |
 | `COST_ASG_INSTANCE_OVERRIDES` | Mixed-instances overrides: literal small `t3`/`t4g`; no `InstanceRequirements` |
 | `COST_EKS_NODEGROUP` | `t3`/`t4g` `small`/`medium`, `ScalingConfig.MaxSize` ≤ 2 |
 | `COST_EBS_VOLUME` | ≤ 30 GiB, not `io1`/`io2` |
@@ -113,7 +113,7 @@ Serverless v2. The lab README must call these out.
 
 ### Suppressions
 
-A suppression is allowed only when the insecure setting **is** the challenge
+A suppression is allowed only when the insecure setting is the challenge
 (for example, "Challenge 2: block public access"). It is declared on that one
 resource, and only the rules marked suppressible above read it:
 
@@ -139,7 +139,7 @@ PublicReports:
 
 ## Known limits
 
-The gate covers the lab **as written**. It does not cover:
+The gate covers the lab as written. It does not cover:
 
 - **What the learner does in the Console.** A challenge could lead to creating
   something larger than the template. `cleanup.sh` deletes what challenges

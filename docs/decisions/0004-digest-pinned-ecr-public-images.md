@@ -12,9 +12,9 @@ handwritten apps add maintenance and risk.
 
 ## Decision
 
-- Order of preference when a scenario needs something running: no app →
-  OS packages in `UserData` → official Amazon ECR Public image → inline glue
-  under ~30 lines.
+- Order of preference when a scenario needs something running: no app, then
+  OS packages in `UserData`, then an official Amazon ECR Public image, then
+  inline glue under ~30 lines.
 - `SEC_CONTAINER_IMAGE_PINNED` requires `@sha256:<digest>` on every ECS
   container image.
 - `image_digest.sh` resolves an ECR Public tag to a digest anonymously.

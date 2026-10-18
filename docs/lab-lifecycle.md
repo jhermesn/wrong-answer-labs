@@ -1,7 +1,7 @@
 # Lab lifecycle
 
-A lab goes through two phases: the agent **authors** it, then the learner
-**uses** it. This page walks both and explains every file a lab contains. The
+A lab goes through two phases: the agent authors it, then the learner
+uses it. This page walks both and explains every file a lab contains. The
 normative rules are in [`SKILL.md`](../skills/wrong-answer-labs/SKILL.md) and
 [`references/lab-format.md`](../skills/wrong-answer-labs/references/lab-format.md).
 
@@ -25,22 +25,22 @@ normative rules are in [`SKILL.md`](../skills/wrong-answer-labs/SKILL.md) and
 | 5 | Deploy + delete > 30 min | Managed Microsoft AD |
 | 6 | A second account or a principal the learner does not control | Cross-account snapshot sharing |
 
-Rows 2–3 are also enforced mechanically by `lab-cost.guard`. A lab that only
+Rows 2 and 3 are also enforced mechanically by `lab-cost.guard`. A lab that only
 passes the guard by dropping the tested concept is docs-only too.
 
 ## Authoring (agent)
 
 | Step | What happens | Tool / file |
 |---|---|---|
-| 1. Normalize | Each question becomes `Qn`: concept, services, learner's answer, correct answer. Missing answers are derived and confirmed in official AWS docs (an AWS MCP server's documentation tools when connected, such as the Agent Toolkit for AWS's AWS MCP Server or `awslabs.aws-documentation-mcp-server`, else docs.aws.amazon.com). No confirming doc → `⚠️ unverified`. | — |
+| 1. Normalize | Each question becomes `Qn`: concept, services, learner's answer, correct answer. Missing answers are derived and confirmed in official AWS docs (an AWS MCP server's documentation tools when connected, such as the Agent Toolkit for AWS's AWS MCP Server or `awslabs.aws-documentation-mcp-server`, else docs.aws.amazon.com). No confirming doc → `⚠️ unverified`. | |
 | 2. Map domains | Match each question to the official exam guide domains. | Exam guide index |
-| 3. Split into scenarios | One lab per realistic scenario, 1–5 challenges, ≤ 90 min. Related questions share a lab; unrelated ones never do. | — |
+| 3. Split into scenarios | One lab per realistic scenario, 1 to 5 challenges, ≤ 90 min. Related questions share a lab; unrelated ones never do. | |
 | 4. Lab vs docs-only | Apply the criteria above. | `cost-policy.md` |
 | 5. Scaffold | Copy the skeleton, substitute `{{CERT}}` and `{{STACK_NAME}}`. | `new_lab.sh` |
 | 6. Fill | Replace every `{{PLACEHOLDER}}`. Prices come from `price.sh`, image digests from `image_digest.sh`. | `lab-format.md` |
 | 7. Gate | Loop until `PASS`. Fix the lab, never the rules. | `validate_lab.sh` |
 | 8. Self-test | Labs only. Recommended for every lab, run only after the learner agrees (it creates billable resources). Must end in `SELFTEST PASS`. | `selftest.sh` |
-| 9. Report | One row per entry: questions covered, estimated cost, validator result, self-test result or why not run. | — |
+| 9. Report | One row per entry: questions covered, estimated cost, validator result, self-test result or why not run. | |
 
 ### Red flags
 
@@ -62,14 +62,14 @@ The ones that protect the learning value:
 
 ## Lab files
 
-### `README.md` — what the learner reads
+### `README.md`: what the learner reads
 
 Sections are identified by anchors, not headings, so the prose can be in any
 language ([ADR 0002](decisions/0002-anchor-based-lab-structure.md)).
 
 | Anchor | Content |
 |---|---|
-| `section:scenario` | 3–6 sentences: fictional company, what went wrong, the constraint from the missed question |
+| `section:scenario` | 3 to 6 sentences: fictional company, what went wrong, the constraint from the missed question |
 | `section:objectives` | What the learner will demonstrate |
 | `section:before-you-start` | Account, CloudShell, region, deploy time |
 | `section:cost` | Cost table: one row per billable resource, `us-east-1` price, lab cost, official pricing URL |
@@ -79,7 +79,7 @@ language ([ADR 0002](decisions/0002-anchor-based-lab-structure.md)).
 | `section:cleanup` | `bash cleanup.sh <stack>` |
 | `section:references` | Official documentation links (all checked by the validator) |
 
-### `template.yaml` — starting environment
+### `template.yaml`: starting environment
 
 - Provisions the starting state only; must not satisfy any criterion
   (`selftest.sh` enforces a 0/N baseline).
@@ -90,7 +90,7 @@ language ([ADR 0002](decisions/0002-anchor-based-lab-structure.md)).
 - Everything deletable by `delete-stack`.
 - Deploy time ≤ 15 min.
 
-### `check.sh` — grader
+### `check.sh`: grader
 
 Built on a shared harness from `assets/lab/check.sh`:
 
@@ -115,7 +115,7 @@ Checks grade the resulting configuration, not the path taken. A grader can
 compute its expected value (the DVA-C02 example compares the queue visibility
 timeout against six times the function's *current* timeout).
 
-### `cleanup.sh` — teardown
+### `cleanup.sh`: teardown
 
 Idempotently deletes resources the learner created by name during challenges
 (`{{CHALLENGE_CLEANUP}}`), empties every stack S3 bucket (all versions and

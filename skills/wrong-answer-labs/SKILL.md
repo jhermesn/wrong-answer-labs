@@ -15,8 +15,9 @@ Console without step-by-step, and an automated grader. Topics too expensive or
 impossible to reproduce (Direct Connect, Outposts, Shield Advanced...) become
 docs-only entries with official documentation instead.
 
-Determinism comes from tools, not judgment: `cfn-lint`, `cfn-guard` rules
-(cost + security), `shellcheck`, a link checker, and a real-account self-test.
+You write the lab; deterministic tools decide whether it ships: `cfn-lint`,
+`cfn-guard` rules (cost + security), `shellcheck`, a link checker, and a
+real-account self-test.
 Scripts are in this skill's `scripts/`; `<skill>` below is this skill's base directory.
 
 ## Inputs
@@ -38,7 +39,7 @@ Requires `cfn-lint`, `cfn-guard`, `shellcheck`, `jq`, `curl`; `checkov` optional
 8. **Self-test** (labs only): offer it for every lab and recommend it, because a lab can pass every static check and still fail in a real account. It creates billable resources (usually cents) and needs AWS credentials, so run it only after the user agrees. `bash <skill>/scripts/selftest.sh <lab-dir>` must end in `SELFTEST PASS` (baseline 0/N, solved N/N, cleanup ran); if it fails, fix the lab and run it again.
 9. **Report**: one row per lab/docs-only entry with questions covered, estimated cost, validator result, and self-test result (or "not run" and why).
 
-## Red flags — stop and fix the lab
+## Red flags: stop and fix the lab
 
 | Temptation | Why it is wrong |
 |---|---|
@@ -59,7 +60,7 @@ Requires `cfn-lint`, `cfn-guard`, `shellcheck`, `jq`, `curl`; `checkov` optional
 |---|---|
 | `references/lab-format.md` | Scenario/challenge/grader/template rules, anchors |
 | `references/cost-policy.md` | Lab vs docs-only criteria, cost table sourcing |
-| `examples/SAA-C03/s3-accidental-delete` | Complete lab that passes the gate — copy its style |
+| `examples/SAA-C03/s3-accidental-delete` | Complete lab that passes the gate; copy its style |
 | `examples/DVA-C02/sqs-lambda-retries` | Three grouped questions in one lab, with a grader that computes its expected value |
 | `examples/SAA-C03/direct-connect-resiliency` | Complete docs-only entry |
 | `scripts/price.sh` | On-demand prices from the Price List API for the cost table |

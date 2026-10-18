@@ -1,4 +1,4 @@
-# Solution — Stop double-charging customers
+# Solution: Stop double-charging customers
 
 > Spoilers. Open only after attempting the challenges.
 
@@ -40,7 +40,7 @@ bash check.sh lab-dva-c02-sqs-lambda-retries
 ## Answer key
 
 <!-- question:Q1 -->
-### Q1 — Orders processed twice by a Lambda function reading SQS
+### Q1: Orders processed twice by a Lambda function reading SQS
 
 - **Your answer:** C) switch to a FIFO queue.
 - **Correct answer:** B) set the queue visibility timeout to at least six times the function timeout.
@@ -50,7 +50,7 @@ A FIFO queue removes duplicate *sends* within its deduplication window, but the 
 Docs: [Configuring a queue to use with Lambda](https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-configure.html).
 
 <!-- question:Q2 -->
-### Q2 — Messages that fail every time
+### Q2: Messages that fail every time
 
 - **Your answer:** D) configure a Lambda on-failure destination.
 - **Correct answer:** A) configure a dead-letter queue with a redrive policy on the source queue.
@@ -60,7 +60,7 @@ On-failure destinations cover asynchronous invocations and the Kinesis, DynamoDB
 Docs: [Retaining records of Lambda invocations](https://docs.aws.amazon.com/lambda/latest/dg/invocation-async-retain-records.html), [Using dead-letter queues in Amazon SQS](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-dead-letter-queues.html).
 
 <!-- question:Q3 -->
-### Q3 — Too many empty receives
+### Q3: Too many empty receives
 
 - **Your answer:** A) short polling with MaxNumberOfMessages set to 10.
 - **Correct answer:** B) enable long polling by setting ReceiveMessageWaitTimeSeconds greater than 0. You did not have the answer key; this was confirmed in the SQS documentation below.

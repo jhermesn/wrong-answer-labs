@@ -2,7 +2,7 @@
 
 | Certification | Exam guide domain(s) | Duration | Source questions |
 |---|---|---|---|
-| DVA-C02 | 1 — Development with AWS Services; 4 — Troubleshooting and Optimization | 45 min | Q1, Q2, Q3 |
+| DVA-C02 | 1: Development with AWS Services; 4: Troubleshooting and Optimization | 45 min | Q1, Q2, Q3 |
 
 <!-- section:scenario -->
 ## Scenario
@@ -51,10 +51,10 @@ aws cloudformation deploy \
 ## Challenges
 
 Use the AWS Management Console. There is no step-by-step: read the requirement, investigate the environment and solve it.
-Use the exact **names** requested — the grader looks for them.
+Use the exact names requested, because the grader looks for them.
 
 <!-- challenge:1 -->
-### Challenge 1 — Charge each order once
+### Challenge 1: Charge each order once
 
 Orders are sometimes charged twice: another invocation picks up an order while the first one is still charging it. Fix the orders queue (stack output `OrdersQueueUrl`) following AWS's recommendation for queues that trigger Lambda functions. The function (stack output `OrderProcessorName`) must keep working as it does today.
 
@@ -62,7 +62,7 @@ Orders are sometimes charged twice: another invocation picks up an order while t
 - While an order is being processed, no other invocation receives it, with the margin AWS recommends for Lambda event sources.
 
 <!-- challenge:2 -->
-### Challenge 2 — Set broken orders aside
+### Challenge 2: Set broken orders aside
 
 A few orders can never be processed and are retried forever. After their fifth failed attempt they must stop being retried and wait in the failed-orders queue (stack output `FailedOrdersQueueUrl`) for the team to inspect.
 
@@ -71,7 +71,7 @@ A few orders can never be processed and are retried forever. After their fifth f
 - An order is set aside after exactly five failed attempts.
 
 <!-- challenge:3 -->
-### Challenge 3 — Stop paying for empty answers
+### Challenge 3: Stop paying for empty answers
 
 The reconciliation worker reads the queue in stack output `ReconciliationQueueUrl` and most of its requests return no messages. Reduce those empty responses without changing the worker's code.
 
