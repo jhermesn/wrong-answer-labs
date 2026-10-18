@@ -135,7 +135,13 @@ check 1 "Old copies are removed 30 days after they stop being current" "30" \
   every check.
 - Read state with the AWS CLI; filter with `--query` (JMESPath) down to one
   scalar compared by exact match. For a boolean condition, make the query
-  return `true`/`false` (e.g. `length(...) > \`0\``).
+  return a boolean (e.g. `length(...) > \`0\``). With `--output text` the CLI
+  prints it as `True` or `False`, so that is the expected value to write.
+- With `--output text` the CLI runs `--query` once per page of results, so on
+  an operation that paginates (`filter-log-events`, most `list-*`, `scan`,
+  `query`) a single expression can print one line per page (`True` then
+  `False`). Use `--output json` there: the query runs once over all pages and
+  prints `true`/`false` in lowercase.
 - When one expression reads several fields of the same item, pipe the item
   first: `AutoScalingGroups[0] | MinSize >= \`2\` && MaxSize <= \`3\``.
   Without the pipe, `MaxSize` is read from the top level and the check

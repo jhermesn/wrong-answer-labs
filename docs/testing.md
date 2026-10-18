@@ -48,6 +48,7 @@ and the specific message:
 | `lab-without-questions` | Drop `question:` anchors | no `<!-- question:Q<n> -->` blocks |
 | `retained-resource` | `DeletionPolicy: Retain` | guard violations |
 | `invalid-template` | Misspell a property | cfn-lint findings |
+| `lowercase-text-boolean` | Check expecting `"true"` from `--output text` | checks expect lowercase true/false |
 | `mutating-grader` | `put-bucket-versioning` in `check.sh` | not read-only |
 | `invented-cli-command` | `aws autoscaling wait group-not-exists` | AWS CLI commands that do not exist |
 | `unsafe-script` | Unused variable | shellcheck findings |
