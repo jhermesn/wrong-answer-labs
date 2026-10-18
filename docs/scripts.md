@@ -59,6 +59,9 @@ Requires `cfn-lint`, `cfn-guard`, `shellcheck`, `curl` (links) and optionally
 | 66 | Not a directory |
 | 69 | Required tool missing (message includes the install command) |
 
+With `WAL_RUN_LOG=<file>` set, it appends one JSON line per run (see
+[Run log](#run-log)).
+
 ### `selftest.sh`
 
 ```bash
@@ -80,6 +83,54 @@ stack → deploy (`CAPABILITY_NAMED_IAM`, standard tags) → baseline must be
 | 1, `SELFTEST FAIL: the reference solution ...` | `solve.sh` does not satisfy the grader |
 | 65 | Stack name not found in README |
 | `CLEANUP FAILED: delete stack ... manually` | Teardown failed; delete the stack by hand |
+
+With `WAL_RUN_LOG=<file>` set, it appends one JSON line per run (see
+[Run log](#run-log)).
+
+### Run log
+
+`validate_lab.sh` and `selftest.sh` append one JSON object per run to the file
+in `WAL_RUN_LOG` when it is set, and need `jq` for it. Nothing is written
+otherwise. The log is for measuring the gates across many labs, for example
+how often each validator stage fails before a lab passes.
+
+`validate_lab.sh`:
+
+```json
+{"tool": "validate_lab", "lab": "/abs/path/labs/SAA-C03/web-tier", "kind": "lab",
+ "started_at": "2026-10-17T21:04:11Z", "duration_s": 14, "result": "FAIL", "problems": 1,
+ "stages": [{"stage": "files", "status": "pass", "findings": []},
+            {"stage": "cfn-guard", "status": "fail", "findings": ["guard violations above"]},
+            {"stage": "links", "status": "skipped", "findings": []}]}
+```
+
+`result` is `PASS`, `FAIL` or `ERROR` (a required tool is missing). Stages, in
+order: `files`, `challenges`, `grader-read-only`, `cli-commands`, `cfn-lint`,
+`cfn-guard`, `checkov`, `shellcheck`, `links`; docs-only entries have only
+`files` and `links`. A stage is `skipped` when its tool is absent or with
+`--offline`. Findings are the `✗` headlines; the detail lines printed under
+them are not logged.
+
+`selftest.sh`:
+
+```json
+{"tool": "selftest", "lab": "/abs/path/labs/SAA-C03/web-tier", "stack": "lab-saa-c03-web-tier",
+ "region": "us-east-1", "started_at": "2026-10-17T21:05:02Z", "duration_s": 612,
+ "result": "PASS", "phase": "solved", "baseline_score": "0/11", "solved_score": "11/11",
+ "cleanup_ok": true,
+ "phase_seconds": {"validate": 9, "deploy": 301, "baseline": 12, "solve": 95, "solved": 14, "cleanup": 181}}
+```
+
+| `result` | Meaning |
+|---|---|
+| `PASS` | Lab works end to end |
+| `ABORTED_INVALID_LAB` | `validate_lab.sh` failed; no AWS call |
+| `ABORTED_STACK_EXISTS` | The stack already existed |
+| `FAIL_BASELINE` | A check passed before the solution |
+| `FAIL_SOLVED` | The reference solution did not satisfy the grader |
+| `ERROR` | A command failed (deploy, `solve.sh`...); `phase` says which |
+
+`cleanup_ok` is `null` when nothing was deployed.
 
 ### `price.sh`
 

@@ -30,6 +30,7 @@ case and exits non-zero on any failure.
 | `price.sh` | Rejects a missing service code (1) and a malformed filter (64). |
 | `image_digest.sh` | Rejects non-ECR-Public images and images without a tag (64). |
 | `selftest.sh` | With a fake `aws` on `PATH` that records every call: an invalid lab aborts with **zero** AWS calls; an existing stack aborts after only `describe-stacks`. |
+| Run log | With `WAL_RUN_LOG` set, `validate_lab.sh` writes the result, every stage and the failing stage's finding, for a lab and a docs-only entry; `selftest.sh` writes its two aborts. |
 
 ### Negative validator cases
 
