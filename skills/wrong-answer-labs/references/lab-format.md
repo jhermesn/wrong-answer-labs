@@ -91,6 +91,12 @@ Rules:
   `Metadata.guard.SuppressedRules` on that one resource.
 - EC2 access goes through SSM Session Manager (instance profile with
   `AmazonSSMManagedInstanceCore`), never SSH open to the internet.
+  The template attaches that policy from the start, even when the challenge
+  is about removing SSH. An SSM Agent that booted without credentials can take
+  longer than a self-test waits to register after the policy is added later,
+  so a challenge that only works once the instances register in Systems
+  Manager cannot be verified. Grade the result instead (no admin port open,
+  instances reachable in Systems Manager).
 - Every resource must be deletable by `delete-stack`: `DeletionPolicy: Delete`,
   no deletion protection, `EmptyOnDelete: true` on ECR repositories.
 - Target deploy time ≤ 15 min; state it in the README.
