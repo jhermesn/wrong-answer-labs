@@ -5,9 +5,9 @@ packaged as a Claude Code plugin. There is no service to run: the product is a
 set of instructions, templates, policy files and bash scripts that an AI
 coding agent follows to turn missed AWS Certification questions into labs.
 
-The core idea: **determinism comes from tools, not from the model's judgment**.
-The agent writes the lab; `cfn-lint`, `cfn-guard`, `shellcheck`, a link
-checker and a real-account self-test decide whether it is acceptable.
+The agent writes each lab, and deterministic tools decide whether it is
+acceptable: `cfn-lint`, `cfn-guard`, `shellcheck`, a link checker and a
+real-account self-test.
 
 ## Components
 
@@ -106,7 +106,7 @@ flowchart LR
 | Self-test → existing stacks | `selftest.sh` aborts if the stack name already exists, because its cleanup trap would delete it. |
 | Rules → weakened by the agent | `SKILL.md` red flags: never edit `rules/*.guard`; a lab that needs a denied type becomes docs-only ([ADR 0001](decisions/0001-default-deny-cost-gate.md)). |
 
-What sits **outside** these boundaries is listed in
+What sits outside these boundaries is listed in
 [guardrails.md → Known limits](guardrails.md#known-limits).
 
 ## Conventions that tie components together

@@ -1,4 +1,4 @@
-# Solution — {{TITLE}}
+# Solution: {{TITLE}}
 
 > Spoilers. Open only after attempting the challenges.
 

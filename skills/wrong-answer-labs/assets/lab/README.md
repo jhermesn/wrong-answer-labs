@@ -47,7 +47,7 @@ aws cloudformation deploy \
 ## Challenges
 
 Use the AWS Management Console. There is no step-by-step: read the requirement, investigate the environment and solve it.
-Use the exact **names** requested — the grader looks for them.
+Use the exact names requested, because the grader looks for them.
 
 {{CHALLENGES}}
 

@@ -2,6 +2,7 @@
 # Static quality gate for a generated lab. Needs no AWS credentials.
 # Usage: bash validate_lab.sh <lab-dir> [--offline]
 #   --offline  skip the HTTP check of documentation links
+# Set WAL_RUN_LOG=<file> to append one JSON line per run (needs jq).
 #
 # Structure is checked through HTML comment anchors (<!-- section:... -->,
 # <!-- challenge:N -->, <!-- solution:N -->, <!-- question:QN -->) so headings
@@ -12,13 +13,35 @@ SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 lab_dir="${1:?usage: bash validate_lab.sh <lab-dir> [--offline]}"
 offline="${2:-}"
 errors=0
+started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+stage=""
+# One "<stage>\t<event>\t<message>" line per stage, failure or skip, for WAL_RUN_LOG.
+events=""
 
-fail() { echo "  ✗ $*"; errors=$((errors + 1)); }
+record() { events+="$stage"$'\t'"$1"$'\t'"$2"$'\n'; }
+fail() { echo "  ✗ $*"; errors=$((errors + 1)); record fail "$*"; }
 ok() { echo "  ✓ $*"; }
-section() { printf '\n== %s ==\n' "$1"; }
+skip() { echo "  - $*"; record skip "$*"; }
+section() { stage="$1"; record start "$2"; printf '\n== %s ==\n' "$2"; }
+
+write_run_log() {
+  [[ -n "${WAL_RUN_LOG:-}" ]] && command -v jq >/dev/null || return 0
+  printf '%s' "$events" | jq -Rsc \
+    --arg lab "$lab_path" --arg kind "$kind" --arg started_at "$started_at" \
+    --arg result "$1" --argjson problems "$errors" --argjson duration_s "$SECONDS" '
+    [split("\n")[] | select(length > 0) | split("\t") | {stage: .[0], event: .[1], message: .[2]}] as $events
+    | {tool: "validate_lab", lab: $lab, kind: $kind, started_at: $started_at,
+       duration_s: $duration_s, result: $result, problems: $problems,
+       stages: [$events[] | select(.event == "start") | .stage as $name
+         | [$events[] | select(.stage == $name)] as $own
+         | {stage: $name,
+            status: (if any($own[]; .event == "fail") then "fail"
+                     elif any($own[]; .event == "skip") then "skipped" else "pass" end),
+            findings: [$own[] | select(.event == "fail") | .message]}]}' >>"$WAL_RUN_LOG"
+}
 
 require_tool() {
-  command -v "$1" >/dev/null || { echo "missing tool: $1 (install: $2)"; exit 69; }
+  command -v "$1" >/dev/null || { echo "missing tool: $1 (install: $2)"; write_run_log ERROR; exit 69; }
 }
 
 has_anchor() { grep -qF "<!-- $2 -->" "$1" 2>/dev/null; }
@@ -26,10 +49,12 @@ has_anchor() { grep -qF "<!-- $2 -->" "$1" 2>/dev/null; }
 count_anchors() { grep -cE "^<!-- $2:[A-Za-z0-9]+ -->$" "$1" 2>/dev/null; }
 
 [[ -d "$lab_dir" ]] || { echo "not a directory: $lab_dir"; exit 66; }
+lab_path="$(cd "$lab_dir" && pwd)"
 if [[ -f "$lab_dir/template.yaml" ]]; then kind="lab"; else kind="docs-only"; fi
+[[ -z "${WAL_RUN_LOG:-}" ]] || require_tool jq "brew install jq"
 echo "Validating $kind: $lab_dir"
 
-section "Files and sections"
+section files "Files and sections"
 if [[ "$kind" == "lab" ]]; then
   required_files=(README.md template.yaml check.sh cleanup.sh solution/README.md solution/solve.sh)
   required_sections=(scenario objectives before-you-start cost deploy challenges verify cleanup references)
@@ -62,7 +87,7 @@ else
 fi
 
 if [[ "$kind" == "lab" ]]; then
-  section "Challenges vs grader vs solution"
+  section challenges "Challenges vs grader vs solution"
   challenge_count="$(count_anchors "$lab_dir/README.md" challenge)"
   challenge_count="${challenge_count:-0}"
   if [[ "$challenge_count" -lt 1 || "$challenge_count" -gt 5 ]]; then
@@ -83,7 +108,7 @@ if [[ "$kind" == "lab" ]]; then
     fi
   done
 
-  section "Grader is read-only"
+  section grader-read-only "Grader is read-only"
   # The grader runs in the learner's account every time they check their score,
   # so it may only read state. Options must come after the operation name.
   write_calls="$(grep -vE '^[[:space:]]*#' "$lab_dir/check.sh" \
@@ -97,7 +122,7 @@ if [[ "$kind" == "lab" ]]; then
     echo "$write_calls" | sed 's/^/      /'
   fi
 
-  section "AWS CLI commands exist"
+  section cli-commands "AWS CLI commands exist"
   # Catches invented operations and waiters (e.g. `aws autoscaling wait ...`,
   # which does not exist) before they fail in a real account.
   if command -v aws >/dev/null; then
@@ -119,14 +144,14 @@ if [[ "$kind" == "lab" ]]; then
       printf '%s' "$unknown_commands" | sed 's/^/      /'
     fi
   else
-    echo "  - AWS CLI not installed, skipped"
+    skip "AWS CLI not installed, skipped"
   fi
 
-  section "cfn-lint"
+  section cfn-lint "cfn-lint"
   require_tool cfn-lint "pipx install cfn-lint"
   if cfn-lint --non-zero-exit-code warning "$lab_dir/template.yaml"; then ok "cfn-lint clean"; else fail "cfn-lint findings above"; fi
 
-  section "cfn-guard (cost + security rules)"
+  section cfn-guard "cfn-guard (cost + security rules)"
   require_tool cfn-guard "brew install cloudformation-guard"
   if cfn-guard validate -d "$lab_dir/template.yaml" -r "$SKILL_DIR/rules" --show-summary fail; then
     ok "guard rules pass"
@@ -134,21 +159,21 @@ if [[ "$kind" == "lab" ]]; then
     fail "guard violations above"
   fi
 
-  section "checkov (advisory, does not fail the gate)"
+  section checkov "checkov (advisory, does not fail the gate)"
   if command -v checkov >/dev/null; then
     checkov -f "$lab_dir/template.yaml" --framework cloudformation --compact --quiet --soft-fail
   else
-    echo "  - checkov not installed, skipped (pipx install checkov)"
+    skip "checkov not installed, skipped (pipx install checkov)"
   fi
 
-  section "shellcheck"
+  section shellcheck "shellcheck"
   require_tool shellcheck "brew install shellcheck"
   if shellcheck -S warning "$lab_dir"/*.sh "$lab_dir"/solution/*.sh; then ok "scripts clean"; else fail "shellcheck findings above"; fi
 fi
 
-section "Links"
+section links "Links"
 if [[ "$offline" == "--offline" ]]; then
-  echo "  - skipped (--offline)"
+  skip "skipped (--offline)"
 else
   urls="$(grep -rhoE 'https://[^] )>"`]+' "$lab_dir" --include='*.md' | sed 's/[.,;]$//' | sort -u)"
   [[ -n "$urls" ]] || fail "no documentation links found"
@@ -167,6 +192,12 @@ else
   done
 fi
 
-section "Result"
-if [[ "$errors" -eq 0 ]]; then echo "PASS"; else echo "FAIL ($errors problem(s))"; fi
+printf '\n== Result ==\n'
+if [[ "$errors" -eq 0 ]]; then
+  echo "PASS"
+  write_run_log PASS
+else
+  echo "FAIL ($errors problem(s))"
+  write_run_log FAIL
+fi
 exit $((errors > 0))

@@ -2,7 +2,7 @@
 
 | Certification | Exam guide domain(s) | Source questions |
 |---|---|---|
-| SAA-C03 | 2 — Design Resilient Architectures | Q2 |
+| SAA-C03 | 2: Design Resilient Architectures | Q2 |
 
 <!-- section:why-no-lab -->
 ## Why there is no hands-on lab
@@ -31,7 +31,7 @@ Create a Transit Gateway with a Site-to-Site VPN attachment (no tunnel needs to 
 ## Answer key
 
 <!-- question:Q2 -->
-### Q2 — Highly available hybrid connectivity
+### Q2: Highly available hybrid connectivity
 
 - **Your answer:** one Direct Connect connection with a second virtual interface.
 - **Correct answer:** two Direct Connect connections terminating at separate Direct Connect locations.

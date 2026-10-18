@@ -1,4 +1,4 @@
-# Solution — Recover reports after an accidental delete
+# Solution: Recover reports after an accidental delete
 
 > Spoilers. Open only after attempting the challenges.
 
@@ -32,7 +32,7 @@ bash check.sh lab-saa-c03-s3-accidental-delete
 ## Answer key
 
 <!-- question:Q1 -->
-### Q1 — Protect S3 objects from accidental deletion at low cost
+### Q1: Protect S3 objects from accidental deletion at low cost
 
 **Question (summary):** a company must be able to recover objects accidentally deleted from S3, keeping costs low and operations simple. Which solution?
 

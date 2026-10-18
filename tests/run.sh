@@ -6,6 +6,7 @@
 #   4. new_lab.sh scaffolds labs and rejects bad input
 #   5. price.sh and image_digest.sh reject bad input
 #   6. selftest.sh refuses to deploy unvalidated labs or adopt existing stacks
+#   7. WAL_RUN_LOG records one JSON line per validate_lab.sh and selftest.sh run
 set -uo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -148,6 +149,22 @@ expect_selftest_aborts() {
   fi
 }
 
+# --- 7. run log -------------------------------------------------------------
+
+# expect_run_log <description> <jq filter that must be true for the last line> <command...>
+expect_run_log() {
+  local description="$1" filter="$2" log="$WORK_DIR/run-log-$RANDOM.jsonl"
+  shift 2
+  WAL_RUN_LOG="$log" "$@" >/dev/null 2>&1
+  if [[ ! -s "$log" ]]; then
+    fail "$description: nothing written to WAL_RUN_LOG"
+  elif tail -1 "$log" | jq -e "$filter" >/dev/null 2>&1; then
+    pass "$description"
+  else
+    fail "$description: $(tail -1 "$log")"
+  fi
+}
+
 # --- run --------------------------------------------------------------------
 
 suite "Resource types"
@@ -223,6 +240,28 @@ expect_selftest_aborts "does not touch AWS when the lab fails validation" \
   "$WORK_DIR/retained-resource" "SELFTEST ABORTED: validate_lab.sh fails" 0 '^$'
 expect_selftest_aborts "refuses to adopt a stack that already exists" \
   "$EXAMPLE_LAB" "SELFTEST ABORTED: stack" 1 '^cloudformation describe-stacks '
+
+suite "Run log (WAL_RUN_LOG)"
+expect_run_log "validate_lab.sh logs a passing lab with every stage" \
+  '.tool == "validate_lab" and .result == "PASS" and .problems == 0 and .kind == "lab"
+   and ([.stages[].stage] | contains(["files", "challenges", "grader-read-only", "cfn-lint", "cfn-guard", "shellcheck", "links"]))
+   and (.stages[] | select(.stage == "links") | .status == "skipped")' \
+  bash "$VALIDATE" "$EXAMPLE_LAB" --offline
+expect_run_log "validate_lab.sh logs the failing stage and its finding" \
+  '.result == "FAIL" and .problems == 1
+   and ([.stages[] | select(.status == "fail") | .stage] == ["cfn-guard"])
+   and (.stages[] | select(.stage == "cfn-guard") | .findings == ["guard violations above"])' \
+  bash "$VALIDATE" "$WORK_DIR/retained-resource" --offline
+expect_run_log "validate_lab.sh logs a docs-only entry" \
+  '.kind == "docs-only" and .result == "PASS"' \
+  bash "$VALIDATE" "$EXAMPLE_DOCS" --offline
+export AWS_CALLS="$WORK_DIR/aws-calls-log"
+expect_run_log "selftest.sh logs an abort on an invalid lab" \
+  '.tool == "selftest" and .result == "ABORTED_INVALID_LAB" and .phase == "validate" and .cleanup_ok == null' \
+  env PATH="$WORK_DIR/bin:$PATH" bash "$SKILL_DIR/scripts/selftest.sh" "$WORK_DIR/retained-resource"
+expect_run_log "selftest.sh logs an abort on an existing stack" \
+  '.tool == "selftest" and .result == "ABORTED_STACK_EXISTS" and .baseline_score == null and .duration_s >= 0' \
+  env PATH="$WORK_DIR/bin:$PATH" STACK_EXISTS=1 bash "$SKILL_DIR/scripts/selftest.sh" "$EXAMPLE_LAB"
 
 suite "Result"
 if [[ "$failures" -eq 0 ]]; then

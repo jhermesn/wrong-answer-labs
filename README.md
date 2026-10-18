@@ -83,16 +83,16 @@ For a complete lab and a documentation-only entry, see
 
 ## Cost and safety
 
-Labs run in **your** AWS account, so an AI-written lab is only trusted after
+Labs run in your AWS account, so an AI-written lab is only trusted after
 automatic checks pass:
 
-- **Cost:** only resource types someone has reviewed are allowed, sizes are
+- Cost: only resource types someone has reviewed are allowed, sizes are
   capped (small instances, small databases, small disks), and nothing may
   survive the cleanup. Each lab lists its estimated cost, taken from AWS's
   price list; most cost well under US$1.
-- **Security:** no SSH or RDP open to the internet, no admin permissions, no
+- Security: no SSH or RDP open to the internet, no admin permissions, no
   public buckets or databases, container images pinned to an exact version.
-- **Correctness:** the CloudFormation template is valid, the grader only reads
+- Correctness: the CloudFormation template is valid, the grader only reads
   your account, every AWS command in the scripts exists, and every
   documentation link works.
 

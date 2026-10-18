@@ -2,7 +2,7 @@
 
 | Certification | Exam guide domain(s) | Duration | Source questions |
 |---|---|---|---|
-| SAA-C03 | 2 — Design Resilient Architectures; 4 — Design Cost-Optimized Architectures | 30 min | Q1 |
+| SAA-C03 | 2: Design Resilient Architectures; 4: Design Cost-Optimized Architectures | 30 min | Q1 |
 
 <!-- section:scenario -->
 ## Scenario
@@ -48,10 +48,10 @@ aws cloudformation deploy \
 ## Challenges
 
 Use the AWS Management Console. There is no step-by-step: read the requirement, investigate the environment and solve it.
-Use the exact **names** requested — the grader looks for them.
+Use the exact names requested, because the grader looks for them.
 
 <!-- challenge:1 -->
-### Challenge 1 — Nothing is lost for good
+### Challenge 1: Nothing is lost for good
 
 Make sure that a report deleted or overwritten in the reports bucket (stack output `ReportsBucketName`) can be restored by any administrator, without involving the root user.
 
@@ -59,7 +59,7 @@ Make sure that a report deleted or overwritten in the reports bucket (stack outp
 - A deleted report can be brought back from the bucket itself.
 
 <!-- challenge:2 -->
-### Challenge 2 — Pay only for 30 days of history
+### Challenge 2: Pay only for 30 days of history
 
 Finance agrees to keep previous copies of a report for 30 days only.
 

@@ -56,7 +56,7 @@ Prefer **troubleshoot** (template ships something broken or incomplete) and
 
 ```markdown
 <!-- challenge:1 -->
-### Challenge 1 — Survive an accidental delete
+### Challenge 1: Survive an accidental delete
 
 The compliance team requires that any object deleted from the `reports` bucket
 (stack output `ReportsBucketName`) can be restored for 30 days.
