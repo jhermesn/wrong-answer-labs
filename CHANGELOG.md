@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/jhermesn/wrong-answer-labs/compare/v0.4.0...v0.4.1) (2026-10-18)
+
+
+### Bug Fixes
+
+* **skill:** attach the SSM policy in the template, not in a challenge ([#14](https://github.com/jhermesn/wrong-answer-labs/issues/14)) ([b2c58db](https://github.com/jhermesn/wrong-answer-labs/commit/b2c58dbafb9364e4a9aedcb49703862ffc74db11))
+
 ## [0.4.0](https://github.com/jhermesn/wrong-answer-labs/compare/v0.3.0...v0.4.0) (2026-10-18)
 
 
