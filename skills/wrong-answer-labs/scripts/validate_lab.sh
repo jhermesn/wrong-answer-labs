@@ -107,6 +107,14 @@ if [[ "$kind" == "lab" ]]; then
       fail "check.sh grades challenge $graded but README.md has no <!-- challenge:$graded -->"
     fi
   done
+  # With --output text the AWS CLI prints booleans as True/False, so a check
+  # expecting "true" can never pass. Continuation lines are joined first.
+  lowercase_booleans="$(awk '{ if (sub(/\\$/, "")) { line = line $0 " "; next } print line $0; line = "" }' "$lab_dir/check.sh" \
+    | grep -E '^check [0-9]+ "[^"]*" "(true|false)" .*--output[ =]+text' | cut -d'"' -f2)"
+  if [[ -n "$lowercase_booleans" ]]; then
+    fail "checks expect lowercase true/false but --output text prints True/False:"
+    echo "$lowercase_booleans" | sed 's/^/      /'
+  fi
 
   section grader-read-only "Grader is read-only"
   # The grader runs in the learner's account every time they check their score,

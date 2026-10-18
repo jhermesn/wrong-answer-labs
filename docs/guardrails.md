@@ -9,7 +9,7 @@ is the static gate between the two: it needs no AWS credentials and must print
 | Stage | Applies to | Fails when |
 |---|---|---|
 | Files and sections | Both | A required file is missing/empty, a `section:*` anchor is missing, any `{{PLACEHOLDER}}` remains, or there is no `question:Qn` block |
-| Challenges vs grader vs solution | Lab | Not 1 to 5 `challenge:N` anchors, a numbering gap, a challenge with no `check N` line or no `solution:N`, or a `check N` for a challenge that does not exist |
+| Challenges vs grader vs solution | Lab | Not 1 to 5 `challenge:N` anchors, a numbering gap, a challenge with no `check N` line or no `solution:N`, or a `check N` for a challenge that does not exist, or a check that expects lowercase `true`/`false` from a command with `--output text` (which prints `True`/`False`) |
 | Grader is read-only | Lab | `check.sh` calls an AWS operation outside the read-only set |
 | AWS CLI commands exist | Lab | Any `aws <service> <operation>` (or `aws <service> wait <waiter>`) in the scripts has no `help` page. Skipped when the AWS CLI is not installed |
 | cfn-lint | Lab | Any error or warning (`--non-zero-exit-code warning`) |

@@ -198,6 +198,8 @@ expect_rejected retained-resource "$EXAMPLE_LAB" "guard violations" \
   "sed -i.bak 's/DeletionPolicy: Delete/DeletionPolicy: Retain/' template.yaml"
 expect_rejected invalid-template "$EXAMPLE_LAB" "cfn-lint findings" \
   "sed -i.bak 's/BucketEncryption:/BucketEncryptionTypo:/' template.yaml"
+expect_rejected lowercase-text-boolean "$EXAMPLE_LAB" "checks expect lowercase true/false" \
+  "printf '%s\n' 'check 1 \"versioning on\" \"true\" \\' '  aws s3api get-bucket-versioning --bucket b --output text' >> check.sh"
 expect_rejected mutating-grader "$EXAMPLE_LAB" "check.sh calls AWS operations that are not read-only" \
   "printf 'check 1 \"x\" \"y\" aws s3api put-bucket-versioning --bucket b\n' >> check.sh"
 if command -v aws >/dev/null; then
