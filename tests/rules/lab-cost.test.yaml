@@ -754,6 +754,48 @@
   expectations:
     rules: {COST_BLOCK_DEVICE_VOLUMES: SKIP}
 
+- name: instance with a 500 GiB volume fails next to an instance without block device mappings
+  input:
+    Resources:
+      Plain:
+        Type: AWS::EC2::Instance
+        Properties: {InstanceType: t3.micro}
+      Big:
+        Type: AWS::EC2::Instance
+        Properties:
+          InstanceType: t3.micro
+          BlockDeviceMappings: [{DeviceName: /dev/xvda, Ebs: {VolumeSize: 500}}]
+  expectations:
+    rules: {COST_BLOCK_DEVICE_VOLUMES: FAIL}
+
+- name: instance with a 500 GiB volume fails next to a mapping without Ebs
+  input:
+    Resources:
+      Big:
+        Type: AWS::EC2::Instance
+        Properties:
+          InstanceType: t3.micro
+          BlockDeviceMappings:
+            - {DeviceName: /dev/sdb, VirtualName: ephemeral0}
+            - {DeviceName: /dev/xvda, Ebs: {VolumeSize: 500}}
+  expectations:
+    rules: {COST_BLOCK_DEVICE_VOLUMES: FAIL}
+
+- name: launch template with a 100 GiB volume fails next to one without block device mappings
+  input:
+    Resources:
+      Plain:
+        Type: AWS::EC2::LaunchTemplate
+        Properties:
+          LaunchTemplateData: {InstanceType: t3.micro}
+      Big:
+        Type: AWS::EC2::LaunchTemplate
+        Properties:
+          LaunchTemplateData:
+            BlockDeviceMappings: [{DeviceName: /dev/xvda, Ebs: {VolumeSize: 100}}]
+  expectations:
+    rules: {COST_BLOCK_DEVICE_VOLUMES: FAIL}
+
 # --- COST_ASG_INSTANCE_OVERRIDES --------------------------------------------
 
 - name: auto scaling overrides with t3.micro and t4g.micro pass
@@ -808,6 +850,23 @@
   expectations:
     rules: {COST_ASG_INSTANCE_OVERRIDES: SKIP}
 
+- name: auto scaling override with c5.4xlarge fails next to a group without overrides
+  input:
+    Resources:
+      Plain:
+        Type: AWS::AutoScaling::AutoScalingGroup
+        Properties: {MinSize: '1', MaxSize: '1'}
+      Mixed:
+        Type: AWS::AutoScaling::AutoScalingGroup
+        Properties:
+          MinSize: '1'
+          MaxSize: '2'
+          MixedInstancesPolicy:
+            LaunchTemplate:
+              Overrides: [{InstanceType: c5.4xlarge}]
+  expectations:
+    rules: {COST_ASG_INSTANCE_OVERRIDES: FAIL}
+
 # --- COST_DYNAMODB_INDEX_THROUGHPUT -----------------------------------------
 
 - name: global secondary index with 5 RCU and 5 WCU passes
@@ -850,6 +909,31 @@
           GlobalSecondaryIndexes: [{IndexName: byDate}]
   expectations:
     rules: {COST_DYNAMODB_INDEX_THROUGHPUT: SKIP}
+
+- name: global secondary index with 1000 RCU fails next to a table without indexes
+  input:
+    Resources:
+      Plain:
+        Type: AWS::DynamoDB::Table
+        Properties: {BillingMode: PAY_PER_REQUEST}
+      Indexed:
+        Type: AWS::DynamoDB::Table
+        Properties:
+          GlobalSecondaryIndexes: [{IndexName: byDate, ProvisionedThroughput: {ReadCapacityUnits: 1000, WriteCapacityUnits: 5}}]
+  expectations:
+    rules: {COST_DYNAMODB_INDEX_THROUGHPUT: FAIL}
+
+- name: global secondary index with 1000 RCU fails next to an on-demand index
+  input:
+    Resources:
+      Indexed:
+        Type: AWS::DynamoDB::Table
+        Properties:
+          GlobalSecondaryIndexes:
+            - {IndexName: onDemand}
+            - {IndexName: byDate, ProvisionedThroughput: {ReadCapacityUnits: 1000, WriteCapacityUnits: 5}}
+  expectations:
+    rules: {COST_DYNAMODB_INDEX_THROUGHPUT: FAIL}
 
 # --- COST_LAMBDA_NO_PROVISIONED_CONCURRENCY ---------------------------------
 
