@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/jhermesn/wrong-answer-labs/compare/v0.4.1...v0.4.2) (2026-10-19)
+
+
+### Bug Fixes
+
+* **rules:** keep rules from skipping when another resource lacks the property ([#16](https://github.com/jhermesn/wrong-answer-labs/issues/16)) ([ae4a9de](https://github.com/jhermesn/wrong-answer-labs/commit/ae4a9de379c69f2b5f849b7213b7473c44be36a1))
+
 ## [0.4.1](https://github.com/jhermesn/wrong-answer-labs/compare/v0.4.0...v0.4.1) (2026-10-18)
 
 
