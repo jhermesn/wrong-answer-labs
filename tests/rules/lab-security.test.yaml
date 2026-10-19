@@ -325,6 +325,37 @@
   expectations:
     rules: {SEC_IAM_NO_ADMIN_INLINE: SKIP}
 
+- name: inline policy allowing action star fails next to a user without properties
+  input:
+    Resources:
+      Plain: {Type: AWS::IAM::User}
+      Role:
+        Type: AWS::IAM::Role
+        Properties:
+          Policies:
+            - PolicyName: admin
+              PolicyDocument:
+                Statement: [{Effect: Allow, Action: '*', Resource: '*'}]
+  expectations:
+    rules: {SEC_IAM_NO_ADMIN_INLINE: FAIL}
+
+- name: inline policy allowing action star fails next to a role without inline policies
+  input:
+    Resources:
+      Other:
+        Type: AWS::IAM::Role
+        Properties:
+          ManagedPolicyArns: ['arn:aws:iam::aws:policy/ReadOnlyAccess']
+      Role:
+        Type: AWS::IAM::Role
+        Properties:
+          Policies:
+            - PolicyName: admin
+              PolicyDocument:
+                Statement: [{Effect: Allow, Action: '*', Resource: '*'}]
+  expectations:
+    rules: {SEC_IAM_NO_ADMIN_INLINE: FAIL}
+
 # --- SEC_IAM_NO_ADMIN_POLICY ------------------------------------------------
 
 - name: managed policy with scoped actions passes
@@ -436,6 +467,34 @@
             - {'Fn::Sub': 'arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore'}
   expectations:
     rules: {SEC_IAM_NO_ADMINISTRATOR_ACCESS: PASS}
+
+- name: AdministratorAccess fails next to a role without managed policies
+  input:
+    Resources:
+      Other:
+        Type: AWS::IAM::Role
+        Properties:
+          Policies:
+            - PolicyName: read
+              PolicyDocument:
+                Statement: [{Effect: Allow, Action: 's3:GetObject', Resource: '*'}]
+      Role:
+        Type: AWS::IAM::Role
+        Properties:
+          ManagedPolicyArns: ['arn:aws:iam::aws:policy/AdministratorAccess']
+  expectations:
+    rules: {SEC_IAM_NO_ADMINISTRATOR_ACCESS: FAIL}
+
+- name: AdministratorAccess fails next to a user without properties
+  input:
+    Resources:
+      Plain: {Type: AWS::IAM::User}
+      Role:
+        Type: AWS::IAM::Role
+        Properties:
+          ManagedPolicyArns: [{'Fn::Sub': 'arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess'}]
+  expectations:
+    rules: {SEC_IAM_NO_ADMINISTRATOR_ACCESS: FAIL}
 
 # --- SEC_NO_IAM_ACCESS_KEYS -------------------------------------------------
 

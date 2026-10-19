@@ -64,7 +64,11 @@ rule SEC_EC2_IMDSV2 when %ec2_instances !empty {
 
 # IAM allows Statement to be a list of statements or a single statement object,
 # so each shape needs its own query.
-let inline_docs = Resources.*[ Type in ['AWS::IAM::Role', 'AWS::IAM::User', 'AWS::IAM::Group'] ].Properties.Policies[*].PolicyDocument
+# Every query below filters on the property it reads: if one resource lacks it,
+# the query has an unresolved part and the whole rule is skipped, hiding the
+# violation in the other resources.
+let inline_docs = Resources.*[ Type in ['AWS::IAM::Role', 'AWS::IAM::User', 'AWS::IAM::Group']
+    Properties.Policies exists ].Properties.Policies[*].PolicyDocument
 let inline_allows_in_list = %inline_docs[ Statement is_list ].Statement[ Effect == 'Allow' ]
 let inline_allows_as_object = %inline_docs[ Statement is_struct
     Statement.Effect == 'Allow' ].Statement
@@ -115,7 +119,8 @@ rule SEC_IAM_NO_ADMIN_POLICY when %policy_allows_in_list !empty or %policy_allow
 }
 
 # ARNs appear as plain strings or as Fn::Sub with ${AWS::Partition}.
-let principal_arns = Resources.*[ Type in ['AWS::IAM::Role', 'AWS::IAM::User', 'AWS::IAM::Group'] ].Properties.ManagedPolicyArns
+let principal_arns = Resources.*[ Type in ['AWS::IAM::Role', 'AWS::IAM::User', 'AWS::IAM::Group']
+    Properties.ManagedPolicyArns exists ].Properties.ManagedPolicyArns
 let literal_policy_arns = %principal_arns[ this is_string ]
 let sub_policy_arns = %principal_arns[ this is_struct ].'Fn::Sub'
 rule SEC_IAM_NO_ADMINISTRATOR_ACCESS when %literal_policy_arns !empty or %sub_policy_arns !empty {

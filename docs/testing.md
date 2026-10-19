@@ -75,6 +75,10 @@ Conventions:
 - Each `FAIL` case breaks exactly one condition of the rule, so a broken
   condition cannot hide behind another one.
 - `SKIP` means the rule's filter found nothing to evaluate.
+- A rule whose query reads an optional property needs a `FAIL` case with a
+  second resource (or list item) that lacks the property. cfn-guard skips the
+  whole rule when part of a query is unresolved, so the query must filter on
+  the property first (`Resources.*[ Type == ... Properties.X exists ]`).
 - Every rule needs at least one `FAIL` and one `PASS`/`SKIP` case; the
   coverage gate in `run.sh` enforces it by grepping `<RULE>: FAIL` and
   `<RULE>: (PASS|SKIP)`.

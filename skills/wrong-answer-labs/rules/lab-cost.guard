@@ -405,8 +405,13 @@ rule COST_SAGEMAKER_ENDPOINT when %sagemaker_endpoint_configs !empty {
     }
 }
 
-let instance_disks = Resources.*[ Type == 'AWS::EC2::Instance' ].Properties.BlockDeviceMappings[*].Ebs
-let launch_template_disks = Resources.*[ Type == 'AWS::EC2::LaunchTemplate' ].Properties.LaunchTemplateData.BlockDeviceMappings[*].Ebs
+# The queries below filter on every property they read: if one resource or list
+# item lacks it, the query has an unresolved part and the whole rule is skipped,
+# hiding the violation in the others.
+let instance_disks = Resources.*[ Type == 'AWS::EC2::Instance'
+    Properties.BlockDeviceMappings exists ].Properties.BlockDeviceMappings[ Ebs exists ].Ebs
+let launch_template_disks = Resources.*[ Type == 'AWS::EC2::LaunchTemplate'
+    Properties.LaunchTemplateData.BlockDeviceMappings exists ].Properties.LaunchTemplateData.BlockDeviceMappings[ Ebs exists ].Ebs
 rule COST_BLOCK_DEVICE_VOLUMES when %instance_disks !empty or %launch_template_disks !empty {
     when %instance_disks !empty {
         %instance_disks {
@@ -428,7 +433,8 @@ rule COST_BLOCK_DEVICE_VOLUMES when %instance_disks !empty or %launch_template_d
     }
 }
 
-let asg_overrides = Resources.*[ Type == 'AWS::AutoScaling::AutoScalingGroup' ].Properties.MixedInstancesPolicy.LaunchTemplate.Overrides[*]
+let asg_overrides = Resources.*[ Type == 'AWS::AutoScaling::AutoScalingGroup'
+    Properties.MixedInstancesPolicy.LaunchTemplate.Overrides exists ].Properties.MixedInstancesPolicy.LaunchTemplate.Overrides[*]
 rule COST_ASG_INSTANCE_OVERRIDES when %asg_overrides !empty {
     %asg_overrides {
         InstanceRequirements !exists
@@ -440,7 +446,8 @@ rule COST_ASG_INSTANCE_OVERRIDES when %asg_overrides !empty {
     }
 }
 
-let dynamodb_index_throughput = Resources.*[ Type == 'AWS::DynamoDB::Table' ].Properties.GlobalSecondaryIndexes[*].ProvisionedThroughput
+let dynamodb_index_throughput = Resources.*[ Type == 'AWS::DynamoDB::Table'
+    Properties.GlobalSecondaryIndexes exists ].Properties.GlobalSecondaryIndexes[ ProvisionedThroughput exists ].ProvisionedThroughput
 rule COST_DYNAMODB_INDEX_THROUGHPUT when %dynamodb_index_throughput !empty {
     %dynamodb_index_throughput {
         ReadCapacityUnits <= 5
