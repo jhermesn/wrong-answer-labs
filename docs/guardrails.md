@@ -16,7 +16,7 @@ is the static gate between the two: it needs no AWS credentials and must print
 | cfn-guard | Lab | Any rule in `rules/*.guard` fails |
 | checkov | Lab | Never; advisory only, skipped if not installed |
 | shellcheck | Lab | Any finding at severity `warning` or above |
-| Links | Both | Any `https://` URL in `*.md` is not 2xx, or is a docs.aws.amazon.com soft 404 (200 with a meta refresh). Skipped with `--offline` |
+| Links | Both | Any `https://` URL in `*.md` is not 2xx, or is a docs.aws.amazon.com soft 404 (200 with a meta refresh). Placeholder URLs (`https://<api-id>...`), reserved example domains, AWS Console pages and sites that answer 401, 403 or 429 to automated requests are noted, not failed. Skipped with `--offline` |
 
 A missing required tool (`cfn-lint`, `cfn-guard`, `shellcheck`) exits 69 with
 the install command, so the agent can tell the learner what to install.
