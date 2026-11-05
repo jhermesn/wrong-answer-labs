@@ -22,7 +22,7 @@ skills/wrong-answer-labs/
     lab/                        skeleton copied into every new lab
     docs-only/                  skeleton for documentation-only entries
   rules/
-    lab-cost.guard              34 cost rules, default-deny allowlist of 176 types
+    lab-cost.guard              35 cost rules, default-deny allowlist of 176 types
     lab-security.guard          12 security baseline rules
   scripts/
     new_lab.sh                  scaffold a lab from assets/

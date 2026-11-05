@@ -1246,3 +1246,34 @@
       Repo: {Type: AWS::ECR::Repository, Properties: {EmptyOnDelete: false}}
   expectations:
     rules: {COST_ECR_EMPTY_ON_DELETE: FAIL}
+
+# --- QUOTA_LAMBDA_NO_RESERVED_CONCURRENCY -----------------------------------
+
+- name: function without reserved concurrency passes
+  input:
+    Resources:
+      Fn: {Type: AWS::Lambda::Function, Properties: {Runtime: python3.12, Handler: index.handler}}
+  expectations:
+    rules: {QUOTA_LAMBDA_NO_RESERVED_CONCURRENCY: PASS}
+
+- name: function with reserved concurrency fails because new accounts reject it
+  input:
+    Resources:
+      Fn: {Type: AWS::Lambda::Function, Properties: {ReservedConcurrentExecutions: 2}}
+  expectations:
+    rules: {QUOTA_LAMBDA_NO_RESERVED_CONCURRENCY: FAIL}
+
+- name: reserved concurrency on one of two functions fails
+  input:
+    Resources:
+      Api: {Type: AWS::Lambda::Function, Properties: {Handler: index.handler}}
+      Worker: {Type: AWS::Lambda::Function, Properties: {ReservedConcurrentExecutions: 5}}
+  expectations:
+    rules: {QUOTA_LAMBDA_NO_RESERVED_CONCURRENCY: FAIL}
+
+- name: template without functions skips the reserved concurrency rule
+  input:
+    Resources:
+      Bucket: {Type: AWS::S3::Bucket}
+  expectations:
+    rules: {QUOTA_LAMBDA_NO_RESERVED_CONCURRENCY: SKIP}

@@ -81,6 +81,7 @@ bigger size than the one validated.
 | `COST_SAGEMAKER_NOTEBOOK` | `ml.t3.medium` |
 | `COST_SAGEMAKER_ENDPOINT` | Serverless, or `ml.t2.medium`/`ml.m5.large` |
 | `COST_LAMBDA_NO_PROVISIONED_CONCURRENCY` | No provisioned concurrency on versions/aliases |
+| `QUOTA_LAMBDA_NO_RESERVED_CONCURRENCY` | No `ReservedConcurrentExecutions`: a new account (limit 10) rejects any reservation. The validator also rejects `put-function-concurrency` in the scripts |
 | `COST_APIGATEWAY_CACHE_SIZE` | REST API cache only at 0.5 GB, set explicitly |
 | `COST_ECS_SERVICE_COUNT` | `DesiredCount` ≤ 2 |
 | `COST_ECS_TASK_SIZE` | ≤ 1 vCPU, ≤ 2 GiB |

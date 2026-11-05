@@ -226,6 +226,8 @@ if command -v aws >/dev/null; then
 else
   echo "  SKIP invented-cli-command (AWS CLI not installed)"
 fi
+expect_rejected reserved-concurrency "$EXAMPLE_LAB" "reserved Lambda concurrency fails in a new account" \
+  "echo 'aws lambda put-function-concurrency --function-name f --reserved-concurrent-executions 2' >> solution/solve.sh"
 expect_rejected unsafe-script "$EXAMPLE_LAB" "shellcheck findings" \
   "echo 'unused_variable=1' >> cleanup.sh"
 expect_rejected docs-without-questions "$EXAMPLE_DOCS" "no <!-- question:Q<n> --> blocks" \
