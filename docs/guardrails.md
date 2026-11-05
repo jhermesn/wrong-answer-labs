@@ -55,8 +55,9 @@ bigger size than the one validated.
 
 | Rule | Limit |
 |---|---|
-| `COST_EC2_INSTANCE_TYPE` | EC2 instance: `t3`/`t4g` `nano`/`micro`/`small` |
+| `COST_EC2_INSTANCE_TYPE` | EC2 instance: `t3`/`t4g` `nano`/`micro`/`small`, or no type when it launches from a launch template in the same stack |
 | `COST_LAUNCH_TEMPLATE_INSTANCE_TYPE` | Same, for launch templates that set an instance type |
+| `COST_INSTANCE_LAUNCH_TEMPLATE_TYPE` | When an instance has no type, every launch template in the stack sets one |
 | `COST_ASG_MAX_SIZE` | Auto Scaling group `MaxSize` 1 to 3 |
 | `COST_ASG_INSTANCE_OVERRIDES` | Mixed-instances overrides: literal small `t3`/`t4g`; no `InstanceRequirements` |
 | `COST_EKS_NODEGROUP` | `t3`/`t4g` `small`/`medium`, `ScalingConfig.MaxSize` ≤ 2 |
