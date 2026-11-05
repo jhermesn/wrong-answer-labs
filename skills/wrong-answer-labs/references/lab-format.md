@@ -155,7 +155,28 @@ check 1 "Old copies are removed 30 days after they stop being current" "30" \
 - Grade the **resulting configuration**, not the path taken. Accept every
   valid solution the exam would accept (e.g. check the effective permission
   with `aws iam simulate-principal-policy` instead of a specific policy name).
-- Every check must fail against the freshly deployed template.
+- Every check must fail against the freshly deployed template. Before writing
+  one, look at what the template already deploys: a check on a resource the
+  template creates in the required state (an app tier that is already
+  healthy, a database already inside the VPC) passes before the learner
+  starts, and the self-test rejects the lab. Check the property the challenge
+  changes.
+- The same goes for guards. A check that the learner must not break something
+  ("the function keeps its 60-second timeout") passes on the starting state.
+  Fold the guard into the check of the change it protects
+  (`Timeout == \`60\` && MemorySize == \`256\``) instead of grading it alone.
+- Filter one level at a time and flatten before the next filter:
+  `IpPermissions[] | [?FromPort==\`80\`].IpRanges[] | [?CidrIp=='10.0.0.0/16']`.
+  A filter placed right after a projection
+  (`[?FromPort==\`80\`].IpRanges[?CidrIp=='10.0.0.0/16'][]`) returns an empty
+  list even when the rule exists.
+- Some attributes hold a JSON document (SQS `RedrivePolicy` and `Policy`).
+  With `--output text` the CLI prints the document itself, which `jq` already
+  parses: read it with `jq -r '.maxReceiveCount'`. Use `fromjson` only after
+  `--output json`, where the attribute arrives as a quoted string.
+- `--query` sees binary attributes (DynamoDB `B`, KMS `CiphertextBlob`) as raw
+  bytes, so `length()` on them does not count what you expect. Print them with
+  `--output json`, where they are base64 text, and measure with `jq`.
 
 ## Cleanup (`cleanup.sh`)
 
@@ -163,7 +184,11 @@ Replace `{{CHALLENGE_CLEANUP}}` with idempotent deletes (`|| true`) of every
 resource the learner creates outside the stack (by the exact names the
 challenges required), or with `# The challenges only change stack resources.`
 Undo anything a challenge adds that blocks `delete-stack`, such as deletion
-protection. Use `aws <service> wait <waiter>` only when that waiter exists (the
+protection. Delete what the reference solution creates too, children first: a
+route, rule or mapping that the solution attaches to a stack resource (an API
+Gateway route on the stack's integration, a subscription on the stack's topic)
+keeps `delete-stack` from deleting its parent. `selftest.sh` runs `cleanup.sh`
+after `solve.sh`, so a missed resource shows up as `DELETE_FAILED`. Use `aws <service> wait <waiter>` only when that waiter exists (the
 validator checks every AWS CLI command); otherwise poll with a bounded loop.
 
 ## Solution (`solution/README.md` + `solution/solve.sh`)
