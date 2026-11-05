@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.3](https://github.com/jhermesn/wrong-answer-labs/compare/v0.4.2...v0.4.3) (2026-11-05)
+
+
+### Bug Fixes
+
+* **rules:** accept an instance type set by a launch template in the stack ([#19](https://github.com/jhermesn/wrong-answer-labs/issues/19)) ([a232840](https://github.com/jhermesn/wrong-answer-labs/commit/a232840cba159eb25cadd1a3992059d8de8f328a))
+* **skill:** guide graders away from checks the starting state passes ([#21](https://github.com/jhermesn/wrong-answer-labs/issues/21)) ([6209227](https://github.com/jhermesn/wrong-answer-labs/commit/6209227a39445190451e838e3449b5e7b36a0293))
+* **skill:** reject reserved Lambda concurrency, which new accounts refuse ([#20](https://github.com/jhermesn/wrong-answer-labs/issues/20)) ([d801159](https://github.com/jhermesn/wrong-answer-labs/commit/d801159df069cd624968199f333161e1bc063326))
+* **validate:** stop failing links that cannot be fetched ([#18](https://github.com/jhermesn/wrong-answer-labs/issues/18)) ([45dc3b4](https://github.com/jhermesn/wrong-answer-labs/commit/45dc3b47b3fa5ade73f735e23cdf2e5e74a04abe))
+
 ## [0.4.2](https://github.com/jhermesn/wrong-answer-labs/compare/v0.4.1...v0.4.2) (2026-10-19)
 
 
