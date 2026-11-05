@@ -100,6 +100,13 @@ Rules:
 - Every resource must be deletable by `delete-stack`: `DeletionPolicy: Delete`,
   no deletion protection, `EmptyOnDelete: true` on ECR repositories.
 - Target deploy time ≤ 15 min; state it in the README.
+- The lab must work in a new account with default quotas. A new account's
+  Lambda concurrency limit is 10, and Lambda keeps that much unreserved, so
+  reserved concurrency fails in the template and in `solve.sh` alike (the
+  validator rejects both). To cap concurrency, put an SQS queue in front and
+  set `ScalingConfig.MaximumConcurrency` on its event source mapping; if the
+  question is about reserved concurrency itself, write a documentation-only
+  note.
 
 ## Apps, images and code
 

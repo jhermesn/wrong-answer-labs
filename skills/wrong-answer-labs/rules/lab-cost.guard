@@ -490,6 +490,17 @@ rule COST_LAMBDA_NO_PROVISIONED_CONCURRENCY when %lambda_versions_and_aliases !e
     >>
 }
 
+# Not a cost rule: Lambda keeps a minimum of unreserved concurrency, and a new
+# account's whole limit (10) is that minimum, so any reservation fails there.
+# Labs must deploy in a new account.
+let lambda_functions = Resources.*[ Type == 'AWS::Lambda::Function' ]
+rule QUOTA_LAMBDA_NO_RESERVED_CONCURRENCY when %lambda_functions !empty {
+    %lambda_functions.Properties.ReservedConcurrentExecutions !exists
+    <<
+        Violation: reserved concurrency fails in a new account (limit 10, all of it unreserved). Cap an SQS trigger with ScalingConfig.MaximumConcurrency instead, or write a documentation-only note.
+    >>
+}
+
 # The smallest cache (0.5 GB) costs about US$0.02/hour; bigger ones grow fast.
 let rest_api_stages = Resources.*[ Type == 'AWS::ApiGateway::Stage' ]
 let rest_api_deployment_stages = Resources.*[ Type == 'AWS::ApiGateway::Deployment'

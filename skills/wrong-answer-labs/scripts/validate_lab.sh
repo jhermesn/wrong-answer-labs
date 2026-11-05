@@ -132,6 +132,13 @@ if [[ "$kind" == "lab" ]]; then
   fi
 
   section cli-commands "AWS CLI commands exist"
+  # A new account's Lambda limit (10) must stay unreserved, so this call always fails there.
+  reserving_scripts="$(grep -lE '^[^#]*aws[[:space:]]+lambda[[:space:]]+put-function-concurrency' \
+    "$lab_dir"/*.sh "$lab_dir"/solution/*.sh 2>/dev/null)"
+  if [[ -n "$reserving_scripts" ]]; then
+    fail "reserved Lambda concurrency fails in a new account (limit 10); cap the SQS trigger with MaximumConcurrency instead:"
+    echo "$reserving_scripts" | sed "s#^$lab_dir/#      #"
+  fi
   # Catches invented operations and waiters (e.g. `aws autoscaling wait ...`,
   # which does not exist) before they fail in a real account.
   if command -v aws >/dev/null; then
