@@ -199,11 +199,35 @@ rule COST_ALLOWED_RESOURCE_TYPES when %all_resources !empty {
     >>
 }
 
+# An instance may leave InstanceType out only when it launches from a launch
+# template in the same stack; COST_LAUNCH_TEMPLATE_INSTANCE_TYPE checks that
+# template's type, and COST_INSTANCE_LAUNCH_TEMPLATE_TYPE makes sure it has one.
 let ec2_instances = Resources.*[ Type == 'AWS::EC2::Instance' ]
 rule COST_EC2_INSTANCE_TYPE when %ec2_instances !empty {
-    %ec2_instances.Properties.InstanceType in ['t3.nano', 't3.micro', 't3.small', 't4g.nano', 't4g.micro', 't4g.small']
+    %ec2_instances {
+        Properties.InstanceType in ['t3.nano', 't3.micro', 't3.small', 't4g.nano', 't4g.micro', 't4g.small']
+        or
+        Properties.LaunchTemplate.LaunchTemplateId.Ref exists
+        or
+        Properties.LaunchTemplate.LaunchTemplateName.Ref exists
+        <<
+            Violation: EC2 InstanceType must be a literal t3/t4g nano|micro|small, or come from a launch template in this stack.
+        >>
+    }
+    %ec2_instances[ Properties.InstanceType exists ].Properties.InstanceType in ['t3.nano', 't3.micro', 't3.small', 't4g.nano', 't4g.micro', 't4g.small']
     <<
         Violation: EC2 InstanceType must be a literal t3/t4g nano|micro|small.
+    >>
+}
+
+let typeless_instances = Resources.*[ Type == 'AWS::EC2::Instance'
+    Properties.InstanceType not exists ]
+let all_launch_templates = Resources.*[ Type == 'AWS::EC2::LaunchTemplate' ]
+rule COST_INSTANCE_LAUNCH_TEMPLATE_TYPE when %typeless_instances !empty {
+    %all_launch_templates !empty
+    %all_launch_templates.Properties.LaunchTemplateData.InstanceType exists
+    <<
+        Violation: an instance without InstanceType needs every launch template in the stack to set a literal InstanceType.
     >>
 }
 

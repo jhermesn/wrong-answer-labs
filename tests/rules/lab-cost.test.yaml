@@ -109,6 +109,72 @@
   expectations:
     rules: {COST_EC2_INSTANCE_TYPE: SKIP}
 
+- name: instance that takes its type from a launch template in the stack passes
+  input:
+    Resources:
+      Lt: {Type: AWS::EC2::LaunchTemplate, Properties: {LaunchTemplateData: {InstanceType: t3.micro}}}
+      Vm:
+        Type: AWS::EC2::Instance
+        Properties: {LaunchTemplate: {LaunchTemplateId: {Ref: Lt}, Version: '1'}}
+  expectations:
+    rules: {COST_EC2_INSTANCE_TYPE: PASS, COST_INSTANCE_LAUNCH_TEMPLATE_TYPE: PASS}
+
+- name: typed instance next to one that uses a launch template passes
+  input:
+    Resources:
+      Lt: {Type: AWS::EC2::LaunchTemplate, Properties: {LaunchTemplateData: {InstanceType: t3.small}}}
+      Web: {Type: AWS::EC2::Instance, Properties: {InstanceType: t3.micro}}
+      Cache:
+        Type: AWS::EC2::Instance
+        Properties: {LaunchTemplate: {LaunchTemplateName: {Ref: Lt}, Version: '1'}}
+  expectations:
+    rules: {COST_EC2_INSTANCE_TYPE: PASS, COST_INSTANCE_LAUNCH_TEMPLATE_TYPE: PASS}
+
+- name: instance using a launch template outside the stack fails
+  input:
+    Resources:
+      Vm:
+        Type: AWS::EC2::Instance
+        Properties: {LaunchTemplate: {LaunchTemplateId: lt-0123456789abcdef0, Version: '1'}}
+  expectations:
+    rules: {COST_EC2_INSTANCE_TYPE: FAIL}
+
+- name: oversized instance type fails even with a launch template
+  input:
+    Resources:
+      Lt: {Type: AWS::EC2::LaunchTemplate, Properties: {LaunchTemplateData: {InstanceType: t3.micro}}}
+      Vm:
+        Type: AWS::EC2::Instance
+        Properties: {InstanceType: m5.large, LaunchTemplate: {LaunchTemplateId: {Ref: Lt}, Version: '1'}}
+  expectations:
+    rules: {COST_EC2_INSTANCE_TYPE: FAIL}
+
+# --- COST_INSTANCE_LAUNCH_TEMPLATE_TYPE -------------------------------------
+
+- name: typeless instance whose launch template has no type fails
+  input:
+    Resources:
+      Lt: {Type: AWS::EC2::LaunchTemplate, Properties: {LaunchTemplateData: {ImageId: ami-12345678}}}
+      Vm:
+        Type: AWS::EC2::Instance
+        Properties: {LaunchTemplate: {LaunchTemplateId: {Ref: Lt}, Version: '1'}}
+  expectations:
+    rules: {COST_INSTANCE_LAUNCH_TEMPLATE_TYPE: FAIL}
+
+- name: typeless instance in a stack without launch templates fails
+  input:
+    Resources:
+      Vm: {Type: AWS::EC2::Instance, Properties: {ImageId: ami-12345678}}
+  expectations:
+    rules: {COST_INSTANCE_LAUNCH_TEMPLATE_TYPE: FAIL}
+
+- name: instances that all set a type skip the launch template type rule
+  input:
+    Resources:
+      Vm: {Type: AWS::EC2::Instance, Properties: {InstanceType: t3.micro}}
+  expectations:
+    rules: {COST_INSTANCE_LAUNCH_TEMPLATE_TYPE: SKIP}
+
 # --- COST_LAUNCH_TEMPLATE_INSTANCE_TYPE -------------------------------------
 
 - name: launch template with t3.small passes
