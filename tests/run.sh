@@ -102,6 +102,24 @@ expect_rejected() {
   fi
 }
 
+# Links that cannot or should not be fetched are noted, not failed. Every link in
+# the copy is replaced, so the check runs without network access.
+expect_links_not_checked() {
+  local lab="$WORK_DIR/unfetchable-links" output
+  cp -R "$EXAMPLE_DOCS" "$lab"
+  sed -i.bak -E 's#https://[^] )>"`]+#https://shop.example.com/orders#g' "$lab/README.md"
+  printf '%s\n' '- https://<api-id>.execute-api.us-east-1.amazonaws.com/prod' \
+    '- https://console.aws.amazon.com/cloudshell/home' '- https://news.example.org' >>"$lab/README.md"
+  output="$(bash "$VALIDATE" "$lab" 2>&1)"
+  if ! grep -q '^PASS$' <<<"$output"; then
+    fail "unfetchable links: lab was rejected"
+  elif [[ "$(grep -c 'not checked' <<<"$output")" -ne 4 ]]; then
+    fail "unfetchable links: expected 4 'not checked' notes"
+  else
+    pass "notes placeholder, example-domain and Console links without failing"
+  fi
+}
+
 # --- 4. new_lab.sh ----------------------------------------------------------
 
 expect_exit() {
@@ -212,6 +230,7 @@ expect_rejected unsafe-script "$EXAMPLE_LAB" "shellcheck findings" \
   "echo 'unused_variable=1' >> cleanup.sh"
 expect_rejected docs-without-questions "$EXAMPLE_DOCS" "no <!-- question:Q<n> --> blocks" \
   "sed -i.bak '/<!-- question:/d' README.md"
+expect_links_not_checked
 
 suite "new_lab.sh"
 expect_exit "scaffolds a lab" 0 bash "$NEW_LAB" SAA-C03 fresh-lab --root "$WORK_DIR/labs"

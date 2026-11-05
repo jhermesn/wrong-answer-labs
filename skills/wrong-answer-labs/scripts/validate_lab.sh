@@ -22,6 +22,7 @@ record() { events+="$stage"$'\t'"$1"$'\t'"$2"$'\n'; }
 fail() { echo "  ✗ $*"; errors=$((errors + 1)); record fail "$*"; }
 ok() { echo "  ✓ $*"; }
 skip() { echo "  - $*"; record skip "$*"; }
+note() { echo "  - $*"; }
 section() { stage="$1"; record start "$2"; printf '\n== %s ==\n' "$2"; }
 
 write_run_log() {
@@ -188,8 +189,25 @@ else
   body_file="$(mktemp)"
   trap 'rm -f "$body_file"' EXIT
   for url in $urls; do
+    host="${url#https://}"
+    host="${host%%[/:?#]*}"
+    # Placeholders the learner fills in (https://<api-id>...), reserved example
+    # domains (RFC 2606) and Console pages behind sign-in are not links to check.
+    if [[ "$url" == *[\<\{]* ]]; then
+      note "placeholder, not checked: $url"
+      continue
+    elif [[ "$host" =~ (^|\.)(example\.(com|net|org)|example|test|invalid|localhost)$ ]]; then
+      note "reserved example domain, not checked: $url"
+      continue
+    elif [[ "$host" =~ (^|\.)console\.aws\.amazon\.com$ ]]; then
+      note "AWS Console page behind sign-in, not checked: $url"
+      continue
+    fi
     status="$(curl -s -o "$body_file" -L --max-time 20 -w '%{http_code}' "$url")"
-    if [[ ! "$status" =~ ^2 ]]; then
+    # Some sites (re:Post, for one) answer automated requests with 401, 403 or 429.
+    if [[ "$status" =~ ^(401|403|429)$ ]]; then
+      note "$status, the site refuses automated requests, not checked: $url"
+    elif [[ ! "$status" =~ ^2 ]]; then
       fail "$status $url"
     # docs.aws.amazon.com answers unknown pages with 200 + a meta refresh to the guide's index.
     elif grep -qi 'http-equiv="refresh"' "$body_file"; then
