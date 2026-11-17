@@ -19,7 +19,8 @@ ShopFlow sells concert tickets. Each order lands in an SQS queue and a Lambda fu
 <!-- section:before-you-start -->
 ## Before you start
 
-- A study AWS account (never production).
+- **This lab creates billable resources in your AWS account, and you pay for them until you run [Cleanup](#cleanup).**
+- A study AWS account (never production), with an [AWS Budget](https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html) alert.
 - Run every command in [AWS CloudShell](https://console.aws.amazon.com/cloudshell/home?region=us-east-1): bash, AWS CLI v2, `jq` and `git` come preinstalled and it is already signed in. Get the lab files there with `git clone` or **Actions → Upload file**. Running locally also works with bash, AWS CLI v2 and `jq`.
 - Region: `us-east-1` (use the same one in every command).
 - Environment creation time: ~2 min.
@@ -33,7 +34,7 @@ ShopFlow sells concert tickets. Each order lands in an SQS queue and a Lambda fu
 | Lambda requests and duration (128 MB; only runs when you send test orders) | US$0.20 per million requests + US$0.0000166667 per GB-second | < US$0.01 | https://aws.amazon.com/lambda/pricing/ |
 | CloudWatch Logs ingestion (function logs, 1-day retention) | US$0.50 per GB | < US$0.01 | https://aws.amazon.com/cloudwatch/pricing/ |
 
-> ⚠️ The cost only stays at this value if you run **Cleanup** at the end.
+> ⚠️ These are estimates from on-demand prices. Resources keep billing until you run **Cleanup**, including anything you create during the challenges.
 
 <!-- section:deploy -->
 ### Deploy the environment
@@ -89,6 +90,8 @@ Each ✅ is a completed requirement. Maximum score: 4/4.
 
 <!-- section:cleanup -->
 ## Cleanup
+
+Run it even if you did not finish. Until it runs, the lab keeps billing your account.
 
 ```bash
 bash cleanup.sh lab-dva-c02-sqs-lambda-retries
