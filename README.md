@@ -17,6 +17,17 @@ checks your work. Topics too expensive or impossible to reproduce (Direct
 Connect, AWS Organizations policies, cross-account sharing...) become study
 notes with the official documentation instead.
 
+> [!WARNING]
+> **Labs cost real money, and you pay it.** Every lab deploys real AWS
+> resources in your own account, and AWS bills that account, not this
+> project. Most labs are estimated at well under US$1, but only if you run
+> `cleanup.sh` when you finish. Anything left running keeps billing until it
+> is deleted, including what you create by hand in the Console. Before your
+> first lab, use a study account (never production) and
+> [create an AWS Budget](https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html)
+> with an email alert. Documentation-only entries create nothing and cost
+> nothing.
+
 ## Get started
 
 You do this once.
@@ -40,7 +51,11 @@ You do this once.
 
 3. **Sign in to AWS** with `aws login`. Use a study account, never production.
 
-4. **Optional: install the AWS MCP Server** so the agent searches the AWS
+4. **Set a budget** before your first lab: an
+   [AWS Budget](https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html)
+   with an email alert, so a forgotten resource can't run up a bill unnoticed.
+
+5. **Optional: install the AWS MCP Server** so the agent searches the AWS
    documentation through it instead of fetching pages. In Claude Code:
 
    ```text
@@ -72,8 +87,9 @@ You do this once.
    `check.sh` until every item shows ✅. Stuck? `solution/README.md` explains
    the answer and why each wrong option was wrong.
 
-4. **Clean up.** Run `cleanup.sh` (or ask the agent to). It deletes everything
-   the lab created, including what you made during the challenges.
+4. **Clean up, every time.** Run `cleanup.sh` (or ask the agent to), even if
+   you stop halfway. It deletes everything the lab created, including what you
+   made during the challenges. Until it runs, the lab keeps billing your account.
 
 You can also ask the agent to run the self-test first: it deploys the lab,
 proves the grader and the reference solution work, and cleans up.
