@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/jhermesn/wrong-answer-labs/compare/v0.4.3...v0.5.0) (2026-11-17)
+
+
+### Features
+
+* **skill:** make it clear that labs bill the learner's account ([#23](https://github.com/jhermesn/wrong-answer-labs/issues/23)) ([b0cbf5b](https://github.com/jhermesn/wrong-answer-labs/commit/b0cbf5b59163a6de201dd7faa5e5f50c7f80175d))
+
 ## [0.4.3](https://github.com/jhermesn/wrong-answer-labs/compare/v0.4.2...v0.4.3) (2026-11-05)
 
 
