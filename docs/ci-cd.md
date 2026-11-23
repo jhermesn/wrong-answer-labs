@@ -11,14 +11,14 @@ flowchart LR
     CI -->|required check| M[Merge to main]
     M -->|push| RP[release.yml:<br/>release-please]
     RP -->|opens/updates| RPR[Release PR<br/>CHANGELOG + versions]
-    RP -->|workflow_dispatch| CI2[ci.yml on release branch]
+    RPR -->|pull_request| CI2[ci.yml: test]
     RPR -->|merge| M2[Merge to main]
     M2 -->|push| RP2[release-please:<br/>tag + GitHub release]
 ```
 
 ## `ci.yml`
 
-Triggers: `pull_request`, and `workflow_dispatch` (used by `release.yml`).
+Trigger: `pull_request`.
 Permissions: `contents: read`. Runner `ubuntu-24.04`, 20-minute timeout.
 
 | Step | Command |
@@ -47,17 +47,19 @@ No AWS credentials are available in CI, so `selftest.sh` never runs there.
 
 ## `release.yml`
 
-Trigger: `push` to `main`. Permissions: `contents: write`,
-`pull-requests: write`, `actions: write`.
+Trigger: `push` to `main`. Permissions: none for `GITHUB_TOKEN`; the job uses a
+GitHub App token instead.
 
 1. `googleapis/release-please-action` keeps a release PR open with the next
    version, the `CHANGELOG.md` entry, `.release-please-manifest.json` and the
    bumped `$.version` in `.claude-plugin/plugin.json`.
-2. PRs opened with `GITHUB_TOKEN` do not trigger other workflows, but branch
-   protection requires the `test` check. So when a release PR was created or
-   updated, the workflow reads its head branch from the action output and runs
-   `gh workflow run ci.yml --ref <branch>`. If the output carries no PR (it can
-   after a release is published), the step exits cleanly.
+2. The action runs with a token from a GitHub App installed on the repository
+   (`actions/create-github-app-token`, client ID in the
+   `AUTOMATION_APP_CLIENT_ID` variable, private key in the
+   `AUTOMATION_APP_PRIVATE_KEY` secret). A PR opened with `GITHUB_TOKEN` starts
+   no workflow without manual approval, and branch protection requires the
+   `test` check; with the App token, `ci.yml` runs on the release PR like on any
+   other. The App needs read and write access to contents and pull requests.
 3. Merging the release PR makes release-please tag the version and publish the
    GitHub release.
 
