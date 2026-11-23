@@ -38,3 +38,4 @@ the bug.
 | [0003](decisions/0003-only-selftest-writes-to-aws.md) | Only `selftest.sh` writes to the AWS account; graders are read-only |
 | [0004](decisions/0004-digest-pinned-ecr-public-images.md) | Container images come from Amazon ECR Public, pinned by digest |
 | [0005](decisions/0005-automated-releases.md) | Versions and releases are automated with release-please |
+| [0006](decisions/0006-release-pull-requests-use-a-github-app-token.md) | Release pull requests use a GitHub App token so CI runs on them |
