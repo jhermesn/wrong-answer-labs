@@ -9,6 +9,12 @@ on:
   push:
     branches: [main]
 
+# Two pushes in quick succession would both try to open the release pull request
+# and the second run fails; queue the runs instead.
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
 permissions:
   contents: write
   pull-requests: write
